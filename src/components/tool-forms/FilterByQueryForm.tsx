@@ -32,6 +32,11 @@ export const FilterByQueryForm: React.FC<FilterByQueryFormProps> = ({
   const [info, setInfo] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
+  const layerIdRef = React.useRef(layer.id);
+  React.useEffect(() => {
+    layerIdRef.current = layer.id;
+  }, [layer.id]);
+
   React.useEffect(() => {
     setSql('');
     setIdProperty('');
@@ -49,14 +54,16 @@ export const FilterByQueryForm: React.FC<FilterByQueryFormProps> = ({
       setError('SQL and ID property are both required.');
       return;
     }
+    const capturedLayerId = layer.id;
     setBusy(true);
     try {
-      const result = await mapController.filterByQuery(layer.id, sql, idProperty, mcpClient);
+      const result = await mapController.filterByQuery(capturedLayerId, sql, idProperty, mcpClient);
+      if (layerIdRef.current !== capturedLayerId) return;
       if (!result.success) {
-        setError((result as { success: false; error: string }).error);
+        setError('error' in result ? result.error : 'Unknown error');
       } else {
         recorder.record('filter_by_query', {
-          layer_id: layer.id,
+          layer_id: capturedLayerId,
           sql,
           id_property: idProperty,
           id_count: result.idCount,
@@ -68,6 +75,9 @@ export const FilterByQueryForm: React.FC<FilterByQueryFormProps> = ({
         }
         onChange();
       }
+    } catch (e: any) {
+      if (layerIdRef.current !== capturedLayerId) return;
+      setError(e?.message ?? String(e));
     } finally {
       setBusy(false);
     }
