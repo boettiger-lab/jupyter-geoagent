@@ -3,6 +3,10 @@
 **Date:** 2026-04-14
 **Repo:** `boettiger-lab/jupyter-geoagent`
 
+:::{note}
+This is an internal architecture reference for contributors. If you are looking for how to use the extension, see the [Usage Guide](usage.md) instead.
+:::
+
 ## Problem
 
 Geo-agent web apps require hand-authoring a `layers-input.json` config file, writing an `index.html`, and deploying to a URL. This creates friction for researchers who want to explore STAC catalog data, compose maps, and run spatial queries without writing code or managing infrastructure. The target user is someone accustomed to ArcGIS-style GIS workflows — they expect to click, not code.
