@@ -1,0 +1,330 @@
+/*
+ * jupyter-geoagent styles
+ *
+ * Three-column layout: catalog browser | map | layer/query/export panel
+ */
+
+/* ── Panel root ── */
+
+.jp-GeoAgent-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── App layout ── */
+
+.jp-GeoAgent-app {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.jp-GeoAgent-sidebar {
+  width: 280px;
+  min-width: 220px;
+  overflow-y: auto;
+  background: var(--jp-layout-color1);
+  border-right: 1px solid var(--jp-border-color1);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.jp-GeoAgent-sidebar-right {
+  border-right: none;
+  border-left: 1px solid var(--jp-border-color1);
+}
+
+.jp-GeoAgent-main {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+
+/* ── Map ── */
+
+.jp-GeoAgent-map {
+  width: 100%;
+  height: 100%;
+}
+
+/* MapLibre overrides for JupyterLab */
+.jp-GeoAgent-map .maplibregl-canvas {
+  outline: none;
+}
+
+/* ── Common UI elements ── */
+
+.jp-GeoAgent-input {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--jp-border-color1);
+  border-radius: 3px;
+  background: var(--jp-layout-color0);
+  color: var(--jp-ui-font-color0);
+  font-size: var(--jp-ui-font-size1);
+  box-sizing: border-box;
+}
+
+.jp-GeoAgent-textarea {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--jp-border-color1);
+  border-radius: 3px;
+  background: var(--jp-layout-color0);
+  color: var(--jp-ui-font-color0);
+  font-family: var(--jp-code-font-family);
+  font-size: var(--jp-code-font-size);
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.jp-GeoAgent-button {
+  padding: 4px 12px;
+  border: 1px solid var(--jp-border-color1);
+  border-radius: 3px;
+  background: var(--jp-layout-color2);
+  color: var(--jp-ui-font-color0);
+  font-size: var(--jp-ui-font-size1);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.jp-GeoAgent-button:hover:not(:disabled) {
+  background: var(--jp-layout-color3);
+}
+
+.jp-GeoAgent-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.jp-GeoAgent-button-small {
+  padding: 2px 8px;
+  font-size: var(--jp-ui-font-size0);
+}
+
+.jp-GeoAgent-button-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--jp-ui-font-color2);
+  padding: 2px 4px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.jp-GeoAgent-button-icon:hover {
+  color: var(--jp-ui-font-color0);
+}
+
+.jp-GeoAgent-error {
+  color: var(--jp-error-color1);
+  font-size: var(--jp-ui-font-size0);
+  padding: 4px 0;
+}
+
+.jp-GeoAgent-empty {
+  color: var(--jp-ui-font-color2);
+  font-size: var(--jp-ui-font-size1);
+  font-style: italic;
+  padding: 8px 0;
+}
+
+h3 {
+  margin: 0 0 8px 0;
+  font-size: var(--jp-ui-font-size2);
+  color: var(--jp-ui-font-color0);
+}
+
+/* ── Catalog Browser ── */
+
+.jp-GeoAgent-catalog {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jp-GeoAgent-catalog-url {
+  display: flex;
+  gap: 4px;
+}
+
+.jp-GeoAgent-catalog-url input {
+  flex: 1;
+}
+
+.jp-GeoAgent-catalog-filter input {
+  width: 100%;
+}
+
+.jp-GeoAgent-catalog-count {
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-ui-font-color2);
+}
+
+.jp-GeoAgent-catalog-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.jp-GeoAgent-catalog-item {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--jp-border-color2);
+}
+
+.jp-GeoAgent-catalog-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.jp-GeoAgent-catalog-item-title {
+  font-weight: 600;
+  font-size: var(--jp-ui-font-size1);
+  color: var(--jp-ui-font-color0);
+}
+
+.jp-GeoAgent-catalog-item-desc {
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-ui-font-color2);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+/* ── Layer Panel ── */
+
+.jp-GeoAgent-layers {
+  display: flex;
+  flex-direction: column;
+}
+
+.jp-GeoAgent-layer-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.jp-GeoAgent-layer-item {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--jp-border-color2);
+}
+
+.jp-GeoAgent-layer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.jp-GeoAgent-layer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: var(--jp-ui-font-size1);
+}
+
+.jp-GeoAgent-layer-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.jp-GeoAgent-layer-type {
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-ui-font-color2);
+  background: var(--jp-layout-color2);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.jp-GeoAgent-layer-id {
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-ui-font-color3);
+  font-family: var(--jp-code-font-family);
+}
+
+/* ── Tabs ── */
+
+.jp-GeoAgent-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--jp-border-color1);
+  margin-bottom: 8px;
+}
+
+.jp-GeoAgent-tab {
+  flex: 1;
+  padding: 6px 8px;
+  border: none;
+  background: none;
+  color: var(--jp-ui-font-color2);
+  font-size: var(--jp-ui-font-size1);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.jp-GeoAgent-tab:hover {
+  color: var(--jp-ui-font-color0);
+}
+
+.jp-GeoAgent-tab-active {
+  color: var(--jp-brand-color1);
+  border-bottom-color: var(--jp-brand-color1);
+}
+
+.jp-GeoAgent-tab-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ── Query Panel ── */
+
+.jp-GeoAgent-query {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jp-GeoAgent-query-result {
+  background: var(--jp-layout-color0);
+  border: 1px solid var(--jp-border-color1);
+  border-radius: 3px;
+  padding: 8px;
+  overflow: auto;
+  max-height: 300px;
+}
+
+.jp-GeoAgent-query-result pre {
+  margin: 0;
+  font-family: var(--jp-code-font-family);
+  font-size: var(--jp-code-font-size);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Export Panel ── */
+
+.jp-GeoAgent-export {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jp-GeoAgent-export-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.jp-GeoAgent-export-actions .jp-GeoAgent-button {
+  width: 100%;
+  text-align: left;
+}
