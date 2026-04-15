@@ -125,6 +125,9 @@ export const GeoAgentApp: React.FC<GeoAgentAppProps> = ({
             <QueryPanel
               mcpClient={mcpClient}
               recorder={recorderRef.current}
+              serverSettings={serverSettings}
+              defaultMcpUrl={mcpServerUrl}
+              useProxy={useProxy}
             />
           )}
           {activeTab === 'export' && (
