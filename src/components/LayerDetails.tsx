@@ -9,13 +9,16 @@ import * as React from 'react';
 import { LayerState } from '../core/types';
 import { MapViewController } from './MapView';
 import { ToolCallRecorder } from '../core/tools';
+import { MCPClientWrapper } from '../core/mcp';
 import { SetFilterForm } from './tool-forms/SetFilterForm';
 import { SetStyleForm } from './tool-forms/SetStyleForm';
+import { FilterByQueryForm } from './tool-forms/FilterByQueryForm';
 
 export interface LayerDetailsProps {
   layer: LayerState;
   mapController: MapViewController | null;
   recorder: ToolCallRecorder;
+  mcpClient?: MCPClientWrapper | null;
   /** Fired after any control change so the parent can re-read layer state. */
   onChange: () => void;
 }
@@ -24,6 +27,7 @@ export const LayerDetails: React.FC<LayerDetailsProps> = ({
   layer,
   mapController,
   recorder,
+  mcpClient,
   onChange,
 }) => {
   // Rescale is a "min,max" string on LayerState; split for the two inputs.
@@ -136,6 +140,16 @@ export const LayerDetails: React.FC<LayerDetailsProps> = ({
           layer={layer}
           mapController={mapController!}
           recorder={recorder}
+          onChange={onChange}
+        />
+      )}
+
+      {layer.type === 'vector' && mcpClient && (
+        <FilterByQueryForm
+          layer={layer}
+          mapController={mapController!}
+          recorder={recorder}
+          mcpClient={mcpClient}
           onChange={onChange}
         />
       )}

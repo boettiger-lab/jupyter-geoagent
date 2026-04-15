@@ -129,6 +129,7 @@ export const GeoAgentApp: React.FC<GeoAgentAppProps> = ({
               recorder={recorderRef.current}
               refreshKey={layerRefreshKey}
               pendingSelection={pendingLayerSelection}
+              mcpClient={mcpClient}
             />
           )}
           {activeTab === 'query' && (

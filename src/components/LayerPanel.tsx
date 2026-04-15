@@ -9,6 +9,7 @@ import * as React from 'react';
 import { MapViewController } from './MapView';
 import { LayerState } from '../core/types';
 import { ToolCallRecorder } from '../core/tools';
+import { MCPClientWrapper } from '../core/mcp';
 import { LayerDetails } from './LayerDetails';
 
 export interface LayerPanelProps {
@@ -22,6 +23,7 @@ export interface LayerPanelProps {
    * effect fires even if the same id is queued twice in a row.
    */
   pendingSelection?: { id: string; seq: number } | null;
+  mcpClient?: MCPClientWrapper | null;
 }
 
 export const LayerPanel: React.FC<LayerPanelProps> = ({
@@ -29,6 +31,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
   recorder,
   refreshKey,
   pendingSelection,
+  mcpClient,
 }) => {
   const [, forceUpdate] = React.useReducer(x => x + 1, 0);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -129,6 +132,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
           layer={selectedLayer}
           mapController={mapController}
           recorder={recorder}
+          mcpClient={mcpClient}
           onChange={forceUpdate}
         />
       )}

@@ -395,3 +395,55 @@ h3 {
   white-space: pre-wrap;
   word-break: break-all;
 }
+
+/* ── Tool forms ── */
+
+.jp-GeoAgent-tool-form {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--jp-border-color1);
+}
+
+.jp-GeoAgent-tool-form-current {
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-ui-font-color2);
+  margin-bottom: 4px;
+  overflow-x: auto;
+}
+
+.jp-GeoAgent-tool-form-current code {
+  font-family: var(--jp-code-font-family);
+  font-size: var(--jp-code-font-size);
+  background: var(--jp-layout-color0);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.jp-GeoAgent-tool-form-help {
+  margin-top: 6px;
+  font-size: var(--jp-ui-font-size0);
+}
+
+.jp-GeoAgent-tool-form-help summary {
+  cursor: pointer;
+  color: var(--jp-ui-font-color2);
+}
+
+.jp-GeoAgent-tool-form-help pre {
+  margin: 4px 0 0 0;
+  padding: 6px 8px;
+  background: var(--jp-layout-color0);
+  border: 1px solid var(--jp-border-color2);
+  border-radius: 3px;
+  font-family: var(--jp-code-font-family);
+  font-size: var(--jp-code-font-size);
+  white-space: pre-wrap;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.jp-GeoAgent-info {
+  color: var(--jp-success-color1, #2e7d32);
+  font-size: var(--jp-ui-font-size0);
+  padding: 4px 0;
+}
