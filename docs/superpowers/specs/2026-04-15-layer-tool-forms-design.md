@@ -35,7 +35,7 @@ geo-agent already exposes a mature tool surface for map manipulation (`src/compo
   - Remove `setFillColor` (superseded).
 - `LayerState` refactor: rename `paint` → `defaultStyle`; add `currentStyle?: Record<string, any>`.
 - `LayerDetails.tsx` restructure: remove the fill-color picker, categorical filter builder, and standalone "Default filter" JSON display. Integrate the three form components. Keep the opacity slider, colormap dropdown, rescale inputs, and version switcher as bespoke controls (those tool equivalents don't exist upstream yet).
-- Inline help text in each form, lifted from the corresponding geo-agent tool description so the human sees the same "never use legacy `in`, use `match` instead" guidance the LLM sees.
+- Inline help text in each form, sourced dynamically from the corresponding geo-agent tool description (see Reuse section) so the human sees the same "never use legacy `in`, use `match` instead" guidance the LLM sees.
 - New CSS class `.jp-GeoAgent-info` for the green "query matched no features" note.
 - Recorder tool names matched to geo-agent exactly: `set_filter`, `clear_filter`, `reset_filter`, `set_style`, `reset_style`, `filter_by_query`.
 
@@ -46,6 +46,41 @@ geo-agent already exposes a mature tool surface for map manipulation (`src/compo
 - **Schema-driven generic form.** A fallback that would light up any new tool geo-agent adds, automatically. Explicitly deferred — hand-crafted per tool for now.
 - **Map-level tools.** `fly_to`, `set_projection`, `get_dataset_details`, `list_datasets`, `get_map_state` — not LayerDetails concerns.
 - **Tests.** Consistent with the rest of this codebase; verify by browser smoke-test.
+
+## Reuse of geo-agent
+
+### Already reused
+
+- `DatasetCatalog` (from `geo-agent/app/dataset-catalog.js`) — the entire STAC collection-processing pipeline, consumed via `src/core/stac.ts`.
+- Types: `MapLayerConfig`, `DatasetEntry`, `ColumnInfo` (shimmed in `src/typings/geo-agent.d.ts`).
+
+### Added by this PR
+
+**Tool metadata (descriptions + input schemas): dynamic import.** We import `createMapTools` from `geo-agent/app/map-tools.js` and invoke it with a minimal `MapManager`-shaped shim (just `getLayerIds()` and `getVectorLayerIds()` — the only methods the description templates consume). We extract `{ name, description, inputSchema }` from each returned tool and bind them to the corresponding form's help text and validation. The tools' `execute` functions are ignored; our forms call `MapViewController` directly.
+
+Benefit: when geo-agent refines a tool description (e.g. "never use legacy `in` — use `match` instead"), our form help text updates for free on the next `yarn upgrade`. No copy-paste drift.
+
+Risk: coupling to the `createMapTools` signature. Small surface; tolerable. A breaking upstream rename is caught at build time (TypeScript error).
+
+### Duplicated by this PR, with rationale
+
+| Duplicated | Why |
+|---|---|
+| MapLibre layer management (`MapViewController`) | geo-agent's `MapManager` is tied to its non-React UI and JupyterLab's sizing needs are different. Incompatible lifecycles. |
+| Thin execute wrappers (`setFilter`, `setStyle`, etc.) | 3–5 lines each around MapLibre APIs. Written against our `MapViewController`; low-value to share. |
+| `filter_by_query` SQL-wrap + result-parse logic (~20 lines) | Ports geo-agent's `map-tools.js` `filter_by_query.execute`. Substantive logic (DuckDB `array_agg…FILTER`, NULL handling, ID-array parsing). See follow-up note below. |
+| `ToolCallRecorder` | Our minimal version. geo-agent's is entangled with its chat-UI transcript plumbing. |
+
+### Follow-up: `geo-agent-core` extraction
+
+boettiger-lab/jupyter-geoagent#2 already proposes extracting `DatasetCatalog`, `ToolRegistry`, `MCPClient`, and `createMapTools` into a shared `@boettiger-lab/geo-agent-core` package, with the web app continuing to deploy as static CDN. The dynamic-import approach above is forward-compatible — when `-core` lands, it's a one-line import swap:
+
+```ts
+// before:  import { createMapTools } from 'geo-agent/app/map-tools.js';
+// after:   import { createMapTools } from '@boettiger-lab/geo-agent-core';
+```
+
+At that point, the `filter_by_query` wrapping logic ported here should also be re-extracted as a pure helper (`wrapIdQuery(sql, col)` + `parseIdArray(result)`) in `-core`, removing the ~20-line duplication.
 
 ## Architecture
 
