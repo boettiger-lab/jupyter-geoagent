@@ -7,16 +7,9 @@
  */
 
 import * as React from 'react';
-import { STACBrowser } from '../core/stac';
+import { STACBrowser, CollectionStub } from '../core/stac';
 import { MapViewController } from './MapView';
 import { ToolCallRecorder } from '../core/tools';
-
-interface CollectionStub {
-  id: string;
-  title: string;
-  description: string;
-  href: string;
-}
 
 export interface CatalogBrowserProps {
   defaultCatalogUrl: string;

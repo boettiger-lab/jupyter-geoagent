@@ -1,137 +1,30 @@
 /**
- * Core type definitions for jupyter-geoagent.
+ * Types specific to jupyter-geoagent.
  *
- * Mirrors the interfaces used by the geo-agent web app
- * (DatasetCatalog, MapManager, ToolRegistry) so the same
- * conceptual model applies in both environments.
+ * STAC, dataset, and tool types are imported from geo-agent's modules
+ * (see src/typings/geo-agent.d.ts). This file defines only the types
+ * that are unique to the Jupyter extension.
  */
 
-// ── STAC types ──
+// Import geo-agent types for use in this file, then re-export
+import type {
+  DatasetEntry as _DatasetEntry,
+  MapLayerConfig as _MapLayerConfig,
+  ParquetAsset as _ParquetAsset,
+  ColumnInfo as _ColumnInfo,
+} from 'geo-agent/app/dataset-catalog.js';
 
-export interface STACLink {
-  rel: string;
-  href: string;
-  type?: string;
-  title?: string;
-  id?: string;
-}
+// Re-export geo-agent types so components can import from one place
+export type DatasetEntry = _DatasetEntry;
+export type MapLayerConfig = _MapLayerConfig;
+export type ParquetAsset = _ParquetAsset;
+export type ColumnInfo = _ColumnInfo;
 
-export interface STACAsset {
-  href: string;
-  type?: string;
-  title?: string;
-  description?: string;
-  'vector:layers'?: string[];
-  'pmtiles:layer'?: string;
-  'raster:bands'?: Array<{
-    'classification:classes'?: Array<{
-      value: number;
-      description?: string;
-      'color-hint'?: string;
-      color_hint?: string;
-    }>;
-  }>;
-}
+export type {
+  ToolResult,
+} from 'geo-agent/app/tool-registry.js';
 
-export interface STACCollection {
-  id: string;
-  type?: string;
-  title?: string;
-  description?: string;
-  keywords?: string[];
-  license?: string;
-  extent?: {
-    spatial?: { bbox?: number[][] };
-    temporal?: { interval?: string[][] };
-  };
-  links?: STACLink[];
-  assets?: Record<string, STACAsset>;
-  providers?: Array<{ name: string; roles?: string[] }>;
-  'table:columns'?: Array<{
-    name: string;
-    type?: string;
-    description?: string;
-    values?: string[];
-  }>;
-  summaries?: Record<string, any>;
-}
-
-export interface STACCatalog {
-  id?: string;
-  type?: string;
-  title?: string;
-  description?: string;
-  links?: STACLink[];
-}
-
-// ── Dataset types (processed from STAC) ──
-
-export interface ColumnInfo {
-  name: string;
-  type: string;
-  description: string;
-  values?: string[];
-}
-
-export interface MapLayerConfig {
-  assetId: string;
-  layerType: 'vector' | 'raster';
-  sourceType?: 'geojson';
-  title: string;
-  description: string;
-  url?: string;
-  cogUrl?: string;
-  sourceLayer?: string;
-  defaultVisible: boolean;
-  defaultFilter?: any[];
-  defaultStyle?: Record<string, any>;
-  colormap?: string;
-  rescale?: string;
-}
-
-export interface ParquetAsset {
-  assetId: string;
-  title: string;
-  s3Path: string;
-  originalUrl: string;
-  isPartitioned: boolean;
-  description: string;
-}
-
-export interface DatasetEntry {
-  id: string;
-  title: string;
-  description: string;
-  license: string;
-  keywords: string[];
-  provider: string;
-  columns: ColumnInfo[];
-  mapLayers: MapLayerConfig[];
-  parquetAssets: ParquetAsset[];
-  extent?: STACCollection['extent'];
-  thumbnail?: string;
-}
-
-// ── Tool types ──
-
-export interface ToolDefinition {
-  name: string;
-  description: string;
-  inputSchema: {
-    type: 'object';
-    properties: Record<string, any>;
-    required?: string[];
-  };
-  execute: (args: Record<string, any>) => Promise<string>;
-}
-
-export interface ToolResult {
-  success: boolean;
-  name: string;
-  result: string;
-  source: 'local' | 'remote' | 'error';
-  sqlQuery?: string;
-}
+// ── Tool call recording (jupyter-geoagent specific) ──
 
 export interface RecordedToolCall {
   id: number;
@@ -141,7 +34,14 @@ export interface RecordedToolCall {
   timestamp: string;
 }
 
-// ── Map types ──
+export interface ToolCallLog {
+  version: string;
+  catalog: string;
+  created: string;
+  calls: RecordedToolCall[];
+}
+
+// ── Map view state ──
 
 export interface MapViewState {
   center: [number, number];
@@ -149,6 +49,8 @@ export interface MapViewState {
   bearing: number;
   pitch: number;
 }
+
+// ── Layer state (UI tracking, not geo-agent's internal state) ──
 
 export interface LayerState {
   id: string;
@@ -164,23 +66,7 @@ export interface LayerState {
   columns: ColumnInfo[];
 }
 
-// ── MCP types ──
-
-export interface MCPServerConfig {
-  name: string;
-  url: string;
-  type: 'remote' | 'local';
-  headers?: Record<string, string>;
-}
-
-// ── Export types ──
-
-export interface ToolCallLog {
-  version: string;
-  catalog: string;
-  created: string;
-  calls: RecordedToolCall[];
-}
+// ── Export formats ──
 
 export interface LayersInputConfig {
   catalog: string;
@@ -190,4 +76,13 @@ export interface LayersInputConfig {
     collection_id: string;
     assets?: Array<string | { id: string; display_name?: string; visible?: boolean }>;
   }>;
+}
+
+// ── MCP server configuration ──
+
+export interface MCPServerConfig {
+  name: string;
+  url: string;
+  type: 'remote' | 'local';
+  headers?: Record<string, string>;
 }

@@ -1,14 +1,16 @@
 /**
  * MCP client for jupyter-geoagent.
  *
- * Supports two modes:
- *   1. Direct — browser connects to a remote MCP server (same as geo-agent web apps)
- *   2. Proxy  — requests are relayed through the Jupyter server extension,
- *               bypassing CORS / network restrictions in JupyterHub environments
+ * Two modes:
+ *   1. Direct — uses geo-agent's MCPClient (same transport, same reconnect logic)
+ *   2. Proxy  — relays requests through the Jupyter server extension at
+ *               /jupyter-geoagent/mcp-proxy, bypassing CORS / network restrictions
  *
- * The proxy mode uses the /jupyter-geoagent/mcp-proxy endpoint from handlers.py.
+ * The proxy mode is needed for JupyterHub environments that restrict
+ * outbound browser connections.
  */
 
+import { MCPClient as GeoAgentMCPClient } from 'geo-agent/app/mcp-client.js';
 import { URLExt } from '@jupyterlab/coreutils';
 import { ServerConnection } from '@jupyterlab/services';
 
@@ -18,11 +20,19 @@ export interface MCPTool {
   inputSchema: Record<string, any>;
 }
 
-export class MCPClient {
+/**
+ * Thin wrapper that unifies direct (geo-agent MCPClient) and proxy modes
+ * behind a single interface.
+ */
+export class MCPClientWrapper {
   private serverUrl: string;
   private headers: Record<string, string>;
   private useProxy: boolean;
   private jupyterSettings?: ServerConnection.ISettings;
+
+  /** Underlying geo-agent MCPClient, used for direct mode. */
+  private directClient?: GeoAgentMCPClient;
+
   private tools: MCPTool[] = [];
 
   constructor(
@@ -43,12 +53,15 @@ export class MCPClient {
    * Connect and cache the tool list.
    */
   async connect(): Promise<void> {
-    this.tools = await this.fetchTools();
+    if (this.useProxy) {
+      this.tools = await this.proxyListTools();
+    } else {
+      this.directClient = new GeoAgentMCPClient(this.serverUrl, this.headers);
+      await this.directClient.connect();
+      this.tools = this.directClient.getTools() as MCPTool[];
+    }
   }
 
-  /**
-   * Get cached tools.
-   */
   getTools(): MCPTool[] {
     return this.tools;
   }
@@ -57,6 +70,33 @@ export class MCPClient {
    * Call an MCP tool by name.
    */
   async callTool(name: string, args: Record<string, any>): Promise<string> {
+    if (this.useProxy) {
+      return this.proxyCallTool(name, args);
+    }
+    if (!this.directClient) throw new Error('MCP client not connected');
+    return this.directClient.callTool(name, args);
+  }
+
+  // ── Proxy-mode methods ──
+
+  private async proxyListTools(): Promise<MCPTool[]> {
+    const payload = {
+      jsonrpc: '2.0',
+      id: Date.now(),
+      method: 'tools/list',
+      params: {},
+    };
+
+    try {
+      const response = await this.proxyRequest(payload);
+      return (response.result?.tools || []) as MCPTool[];
+    } catch (e) {
+      console.warn('[MCP proxy] Failed to list tools:', e);
+      return [];
+    }
+  }
+
+  private async proxyCallTool(name: string, args: Record<string, any>): Promise<string> {
     const payload = {
       jsonrpc: '2.0',
       id: Date.now(),
@@ -64,45 +104,21 @@ export class MCPClient {
       params: { name, arguments: args },
     };
 
-    const response = await this.sendRequest(payload);
+    const response = await this.proxyRequest(payload);
     const result = response.result;
-
     if (result?.content?.[0]?.text) {
       return result.content[0].text;
     }
     return 'Query executed successfully but returned no data.';
   }
 
-  /**
-   * Send a JSON-RPC request, either directly or via the proxy.
-   */
-  private async sendRequest(payload: any): Promise<any> {
-    if (this.useProxy && this.jupyterSettings) {
-      return this.sendViaProxy(payload);
+  private async proxyRequest(payload: any): Promise<any> {
+    if (!this.jupyterSettings) {
+      throw new Error('Jupyter server settings required for proxy mode');
     }
-    return this.sendDirect(payload);
-  }
 
-  private async sendDirect(payload: any): Promise<any> {
-    const response = await fetch(this.serverUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json, text/event-stream',
-        ...this.headers,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw new Error(`MCP error: HTTP ${response.status}`);
-    }
-    return response.json();
-  }
-
-  private async sendViaProxy(payload: any): Promise<any> {
     const proxyUrl = URLExt.join(
-      this.jupyterSettings!.baseUrl,
+      this.jupyterSettings.baseUrl,
       'jupyter-geoagent',
       'mcp-proxy'
     );
@@ -117,29 +133,12 @@ export class MCPClient {
           headers: this.headers,
         }),
       },
-      this.jupyterSettings!
+      this.jupyterSettings
     );
 
     if (!response.ok) {
       throw new ServerConnection.ResponseError(response);
     }
     return response.json();
-  }
-
-  private async fetchTools(): Promise<MCPTool[]> {
-    const payload = {
-      jsonrpc: '2.0',
-      id: Date.now(),
-      method: 'tools/list',
-      params: {},
-    };
-
-    try {
-      const response = await this.sendRequest(payload);
-      return (response.result?.tools || []) as MCPTool[];
-    } catch (e) {
-      console.warn('[MCP] Failed to list tools:', e);
-      return [];
-    }
   }
 }

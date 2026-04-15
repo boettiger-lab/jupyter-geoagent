@@ -13,7 +13,7 @@ import { LayerPanel } from './LayerPanel';
 import { QueryPanel } from './QueryPanel';
 import { ExportPanel } from './ExportPanel';
 import { ToolCallRecorder } from '../core/tools';
-import { MCPClient } from '../core/mcp';
+import { MCPClientWrapper } from '../core/mcp';
 
 export interface GeoAgentAppProps {
   serverSettings: ServerConnection.ISettings;
@@ -35,7 +35,7 @@ export const GeoAgentApp: React.FC<GeoAgentAppProps> = ({
   useProxy,
 }) => {
   const [mapController, setMapController] = React.useState<MapViewController | null>(null);
-  const [mcpClient, setMcpClient] = React.useState<MCPClient | null>(null);
+  const [mcpClient, setMcpClient] = React.useState<MCPClientWrapper | null>(null);
   const [activeTab, setActiveTab] = React.useState<RightTab>('layers');
   const [layerRefreshKey, setLayerRefreshKey] = React.useState(0);
 
@@ -45,7 +45,7 @@ export const GeoAgentApp: React.FC<GeoAgentAppProps> = ({
   React.useEffect(() => {
     if (!mcpServerUrl) return;
 
-    const client = new MCPClient(mcpServerUrl, {
+    const client = new MCPClientWrapper(mcpServerUrl, {
       headers: mcpHeaders,
       useProxy: useProxy ?? false,
       jupyterSettings: serverSettings,

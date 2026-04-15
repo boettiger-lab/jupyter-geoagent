@@ -3,11 +3,11 @@
  */
 
 import * as React from 'react';
-import { MCPClient } from '../core/mcp';
+import { MCPClientWrapper } from '../core/mcp';
 import { ToolCallRecorder } from '../core/tools';
 
 export interface QueryPanelProps {
-  mcpClient: MCPClient | null;
+  mcpClient: MCPClientWrapper | null;
   recorder: ToolCallRecorder;
 }
 
