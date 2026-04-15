@@ -26,6 +26,42 @@ export const LayerDetails: React.FC<LayerDetailsProps> = ({
   recorder,
   onChange,
 }) => {
+  const [filterColumn, setFilterColumn] = React.useState<string>('');
+  const [filterValues, setFilterValues] = React.useState<string[]>([]);
+
+  // Reset the builder when the selected layer changes.
+  React.useEffect(() => {
+    setFilterColumn('');
+    setFilterValues([]);
+  }, [layer.id]);
+
+  const columnsWithValues = React.useMemo(
+    () => layer.columns.filter(c => c.values && c.values.length > 0),
+    [layer.columns]
+  );
+
+  const activeColumn = columnsWithValues.find(c => c.name === filterColumn);
+
+  const applyCategoricalFilter = () => {
+    if (!mapController) return;
+    if (!filterColumn || filterValues.length === 0) {
+      mapController.clearFilter(layer.id);
+      recorder.record('clear_filter', { layer_id: layer.id });
+    } else {
+      // MapLibre `match` expression: ["match", ["get", col], [v1, v2, ...], true, false]
+      const expr: any[] = ['match', ['get', filterColumn], filterValues, true, false];
+      mapController.setFilter(layer.id, expr);
+      recorder.record('set_filter', { layer_id: layer.id, filter: expr });
+    }
+    onChange();
+  };
+
+  const toggleValue = (v: string) => {
+    setFilterValues(prev =>
+      prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]
+    );
+  };
+
   const handleOpacity = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = parseFloat(e.target.value);
     if (!mapController) return;
@@ -73,6 +109,73 @@ export const LayerDetails: React.FC<LayerDetailsProps> = ({
             value={layer.fillColor ?? '#2E7D32'}
             onChange={handleFillColor}
           />
+        </div>
+      )}
+
+      {layer.type === 'vector' && columnsWithValues.length > 0 && (
+        <div className="jp-GeoAgent-field">
+          <div className="jp-GeoAgent-field-label">
+            <span>Filter by column</span>
+            {layer.filter && (
+              <button
+                className="jp-GeoAgent-button jp-GeoAgent-button-small"
+                onClick={() => {
+                  if (!mapController) return;
+                  mapController.clearFilter(layer.id);
+                  recorder.record('clear_filter', { layer_id: layer.id });
+                  setFilterColumn('');
+                  setFilterValues([]);
+                  onChange();
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <select
+            className="jp-GeoAgent-input"
+            value={filterColumn}
+            onChange={e => { setFilterColumn(e.target.value); setFilterValues([]); }}
+          >
+            <option value="">— column —</option>
+            {columnsWithValues.map(c => (
+              <option key={c.name} value={c.name}>{c.name}</option>
+            ))}
+          </select>
+          {activeColumn && (
+            <>
+              <div
+                style={{
+                  maxHeight: 140,
+                  overflowY: 'auto',
+                  border: '1px solid var(--jp-border-color2)',
+                  borderRadius: 3,
+                  padding: '4px 6px',
+                }}
+              >
+                {activeColumn.values!.map(v => (
+                  <label
+                    key={v}
+                    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--jp-ui-font-size0)' }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={filterValues.includes(v)}
+                      onChange={() => toggleValue(v)}
+                    />
+                    <span>{v}</span>
+                  </label>
+                ))}
+              </div>
+              <button
+                className="jp-GeoAgent-button jp-GeoAgent-button-small"
+                disabled={filterValues.length === 0}
+                onClick={applyCategoricalFilter}
+              >
+                Apply filter ({filterValues.length})
+              </button>
+            </>
+          )}
         </div>
       )}
 
