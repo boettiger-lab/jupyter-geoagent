@@ -95,6 +95,18 @@ export const LayerDetails: React.FC<LayerDetailsProps> = ({
     onChange();
   };
 
+  const handleVersionSwitch = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const idx = parseInt(e.target.value, 10);
+    if (!mapController || isNaN(idx)) return;
+    mapController.switchVersion(layer.id, idx);
+    recorder.record('switch_version', {
+      layer_id: layer.id,
+      version_index: idx,
+      version_label: layer.versions?.[idx]?.label,
+    });
+    onChange();
+  };
+
   const COLORMAPS = [
     'viridis', 'plasma', 'inferno', 'magma', 'cividis',
     'turbo', 'reds', 'blues', 'greens', 'greys',
@@ -121,6 +133,23 @@ export const LayerDetails: React.FC<LayerDetailsProps> = ({
     <div className="jp-GeoAgent-layer-details">
       <h4>Layer Details</h4>
       <div className="jp-GeoAgent-layer-details-name">{layer.displayName}</div>
+
+      {layer.versions && layer.versions.length > 1 && (
+        <div className="jp-GeoAgent-field">
+          <div className="jp-GeoAgent-field-label">
+            <span>Version</span>
+          </div>
+          <select
+            className="jp-GeoAgent-input"
+            value={layer.currentVersionIndex ?? 0}
+            onChange={handleVersionSwitch}
+          >
+            {layer.versions.map((v, i) => (
+              <option key={v.assetId} value={i}>{v.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="jp-GeoAgent-field">
         <div className="jp-GeoAgent-field-label">
