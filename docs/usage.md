@@ -72,38 +72,40 @@ Previously added layers stay on the map — switching catalogs does not clear th
 
 1. Add the vector dataset from the catalog
 2. In the *Layers* tab, click the layer to select it
-3. Expand **Set Style** in the details pane
-4. Edit any supported keys (fill color, line width, fill opacity, etc.)
-5. Changes apply live to the map
+3. Scroll to the **Style** form in the details pane
+4. Edit the JSON object (MapLibre paint properties — e.g. `{"fill-color": "#2E7D32", "fill-opacity": 0.5}`)
+5. Click **Apply** to push the change to the map; **Reset to default** restores the layer's original style
 
-Style changes are recorded in the tool-call log as `set_style` calls.
+Expand "Style syntax (from geo-agent)" below the form for a full list of supported keys. Applied styles are recorded in the tool-call log as `set_style` calls.
 
 ### Filter a vector layer by a property
 
-1. Select the layer in the *Layers* tab
-2. Expand **Set Filter** in the details pane
-3. Choose the property from the dropdown (populated from the layer's schema)
-4. Pick an operator (`==`, `!=`, `>`, `<`, `in`, etc.)
-5. Enter the value
-6. The map updates immediately; only features matching the filter render
+The filter is authored as a [MapLibre filter expression](https://maplibre.org/maplibre-style-spec/expressions/) in JSON form.
 
-To clear, open **Set Filter** again and submit an empty filter.
+1. Select the layer in the *Layers* tab
+2. Scroll to the **Filter** form in the details pane
+3. Edit the JSON textarea — e.g. `["==", ["get", "MNG_AGENCY"], "State Parks"]` or `["match", ["get", "class"], ["forest", "wetland"], true, false]`
+4. Click **Apply**
+5. The map updates immediately; only features matching the filter render
+
+Use **Clear** to remove the filter, or **Reset to default** to restore the layer's original filter. Expand "Filter syntax (from geo-agent)" below the form for more examples.
 
 ### Filter a vector layer by a query result
 
-When a simple property filter isn't enough — for example, you want features whose id appears in the result of an aggregate — use **Filter by Query**:
+When a simple property filter isn't enough — for example, you want features whose id appears in the result of an aggregate — use **Filter by SQL query**:
 
 1. Select the layer in the *Layers* tab
-2. Expand **Filter by Query** (only shown for vector layers when an MCP server is configured)
-3. Write SQL that returns an id list (the column matching the layer's id field)
-4. Submit — the results are pushed to the map as a filter of the form `["in", ["get", "<id_field>"], ...values]`
+2. Scroll to the **Filter by SQL query** form (only rendered for vector layers when an MCP server is connected)
+3. In the SQL textarea, write a `SELECT` that returns a single column of id values — e.g. `SELECT HYBAS_ID FROM read_parquet('s3://…') WHERE UP_AREA > 50000`
+4. In the **ID property** input, enter the feature property on the layer to match against (for cng-datasets this is typically `_cng_fid`)
+5. Click **Apply**. The form reports how many features matched, and the map is filtered to those features. Behind the scenes the map receives a filter of the form `["in", ["get", "<id_property>"], ["literal", [id1, id2, ...]]]`.
 
 ### Run spatial and aggregation queries
 
-1. Switch to the *Query* tab
+1. Switch to the *Query* tab. If you have not already connected, confirm the MCP server URL and click **Connect**
 2. Write a query against a parquet asset (visible in the layer details, or from the STAC catalog)
-3. Click **Run Query**
-4. Scroll the result output
+3. Click **Run Query** (or press Ctrl+Enter)
+4. Scroll the result output below the editor
 
 Queries run through the configured MCP server (a DuckDB server by default). Spatial functions (`ST_Intersects`, `ST_Area`, etc.) are available if the server has the DuckDB spatial extension loaded.
 
