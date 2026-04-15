@@ -10,7 +10,7 @@ From a fresh JupyterLab session to a shareable static map in about two minutes.
 
 ### 1. Open the GeoAgent panel
 
-In the JupyterLab launcher, click **GeoAgent Map** (or choose `File > New > GeoAgent Map` from the menu). A new main-area panel opens with three regions:
+In the JupyterLab launcher, click **GeoAgent Map**. A new main-area panel opens with three regions:
 
 - **Left** — STAC catalog browser
 - **Center** — interactive map
@@ -30,19 +30,23 @@ Click **Add** on any leaf collection. The map recenters to the dataset's boundin
 
 In the *Layers* tab:
 
+- Click a layer row to select it — the details pane appears at the bottom
 - Toggle the checkbox to show or hide
 - Click the **x** to remove
-- With the layer selected, scroll the details pane:
-  - **Vector layers** — *Set Style* (fill / line color, width, opacity) and *Set Filter* (property → operator → value)
+- With a layer selected, the details pane shows:
+  - **Vector layers** — *Set Style* (fill and line colors, width, fill opacity) and *Set Filter* (property → operator → value)
   - **Raster layers** — opacity slider, colormap dropdown, rescale (min / max)
 
 ### 5. Run a SQL query
 
-Switch to the *Query* tab. If the active layers include parquet assets and an MCP server is configured, you can run SQL directly against the data:
+Switch to the *Query* tab. Queries run against a DuckDB MCP server.
 
-1. Write a query in the editor
-2. Click **Run Query**
-3. Results render as a table below the editor
+1. Confirm the MCP server URL at the top of the tab (a default is pre-filled) and click **Connect**
+2. Write a query in the editor (Ctrl+Enter also runs it)
+3. Click **Run Query**
+4. Results appear below the editor
+
+If you see the message "Enter an MCP server URL and click Connect," the server is not yet connected — update the URL if needed and click Connect.
 
 ### 6. Export a shareable map
 
@@ -51,5 +55,3 @@ Switch to the *Export* tab. Three buttons:
 - **Export Static HTML Map** — downloads a self-contained `map-export.html` you can email, host anywhere, or open offline
 - **Export layers-input.json** — the config format consumed by the `geo-agent-template` web app; use this to promote your exploration into a deployed LLM-chat map
 - **Export Tool Call Log** — a JSON record of every action you took in this session; useful for reproducibility and debugging
-
-The static HTML you just downloaded is a complete interactive map of your current view and layer state.
