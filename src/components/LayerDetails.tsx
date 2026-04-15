@@ -62,6 +62,45 @@ export const LayerDetails: React.FC<LayerDetailsProps> = ({
     );
   };
 
+  // Rescale is a "min,max" string on LayerState; split for the two inputs.
+  const [rescaleMin, rescaleMax] = React.useMemo(() => {
+    if (!layer.rescale) return ['', ''];
+    const [a, b] = layer.rescale.split(',');
+    return [a ?? '', b ?? ''];
+  }, [layer.rescale]);
+
+  const [minInput, setMinInput] = React.useState(rescaleMin);
+  const [maxInput, setMaxInput] = React.useState(rescaleMax);
+
+  React.useEffect(() => {
+    setMinInput(rescaleMin);
+    setMaxInput(rescaleMax);
+  }, [rescaleMin, rescaleMax, layer.id]);
+
+  const applyRescale = () => {
+    if (!mapController) return;
+    const trimmedMin = minInput.trim();
+    const trimmedMax = maxInput.trim();
+    const rescale = (trimmedMin && trimmedMax) ? `${trimmedMin},${trimmedMax}` : undefined;
+    mapController.setRescale(layer.id, rescale);
+    recorder.record('set_rescale', { layer_id: layer.id, rescale: rescale ?? null });
+    onChange();
+  };
+
+  const handleColormap = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const cm = e.target.value;
+    if (!mapController) return;
+    mapController.setColormap(layer.id, cm);
+    recorder.record('set_colormap', { layer_id: layer.id, colormap: cm });
+    onChange();
+  };
+
+  const COLORMAPS = [
+    'viridis', 'plasma', 'inferno', 'magma', 'cividis',
+    'turbo', 'reds', 'blues', 'greens', 'greys',
+    'ylgnbu', 'ylorrd', 'rdylgn', 'spectral',
+  ];
+
   const handleOpacity = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = parseFloat(e.target.value);
     if (!mapController) return;
@@ -177,6 +216,50 @@ export const LayerDetails: React.FC<LayerDetailsProps> = ({
             </>
           )}
         </div>
+      )}
+
+      {layer.type === 'raster' && (
+        <>
+          <div className="jp-GeoAgent-field">
+            <div className="jp-GeoAgent-field-label">
+              <span>Colormap</span>
+            </div>
+            <select
+              className="jp-GeoAgent-input"
+              value={layer.colormap ?? 'reds'}
+              onChange={handleColormap}
+            >
+              {COLORMAPS.map(cm => (
+                <option key={cm} value={cm}>{cm}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="jp-GeoAgent-field">
+            <div className="jp-GeoAgent-field-label">
+              <span>Rescale (min, max)</span>
+            </div>
+            <div className="jp-GeoAgent-field-row">
+              <input
+                type="number"
+                className="jp-GeoAgent-input"
+                value={minInput}
+                placeholder="min"
+                onChange={e => setMinInput(e.target.value)}
+              />
+              <input
+                type="number"
+                className="jp-GeoAgent-input"
+                value={maxInput}
+                placeholder="max"
+                onChange={e => setMaxInput(e.target.value)}
+              />
+              <button className="jp-GeoAgent-button jp-GeoAgent-button-small" onClick={applyRescale}>
+                Apply
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {layer.defaultFilter && (
