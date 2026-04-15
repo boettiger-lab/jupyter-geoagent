@@ -39,6 +39,10 @@ export const SetStyleForm: React.FC<SetStyleFormProps> = ({
   const setStyleDesc = meta['set_style']?.description ?? '';
 
   const apply = () => {
+    if (!text.trim()) {
+      setError('Enter a style object (e.g. {"fill-color": "#FF1493", "fill-opacity": 0.5}).');
+      return;
+    }
     let parsed: any;
     try {
       parsed = JSON.parse(text);

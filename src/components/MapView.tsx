@@ -62,6 +62,17 @@ export class MapViewController {
       return layerId;
     }
 
+    // Paint actually applied to the map — this must be the single source of
+    // truth for LayerState.defaultStyle / currentStyle so the Style form
+    // always has real content to show (not just a placeholder) for layers
+    // that don't supply their own default_style in STAC.
+    const appliedPaint: Record<string, any> =
+      config.defaultStyle
+        ? { ...config.defaultStyle }
+        : config.layerType === 'vector'
+          ? { 'fill-color': '#2E7D32', 'fill-opacity': 0.5 }
+          : { 'raster-opacity': 0.7 };
+
     if (config.layerType === 'vector') {
       if (config.sourceType === 'geojson') {
         this.map.addSource(sourceId, { type: 'geojson', data: config.url! });
@@ -72,16 +83,11 @@ export class MapViewController {
         });
       }
 
-      const paint = config.defaultStyle || {
-        'fill-color': '#2E7D32',
-        'fill-opacity': 0.5,
-      };
-
       const layerDef: maplibregl.LayerSpecification = {
         id: layerId,
         type: 'fill',
         source: sourceId,
-        paint: paint as any,
+        paint: appliedPaint as any,
         layout: { visibility: config.defaultVisible ? 'visible' : 'none' },
       };
 
@@ -119,7 +125,7 @@ export class MapViewController {
         id: layerId,
         type: 'raster',
         source: sourceId,
-        paint: { 'raster-opacity': 0.7 },
+        paint: appliedPaint as any,
         layout: { visibility: config.defaultVisible ? 'visible' : 'none' },
       });
     }
@@ -140,8 +146,8 @@ export class MapViewController {
       fillColor: initialFillColor,
       filter: config.defaultFilter,
       defaultFilter: config.defaultFilter,
-      defaultStyle: config.defaultStyle,
-      currentStyle: config.defaultStyle ? { ...config.defaultStyle } : undefined,
+      defaultStyle: appliedPaint,
+      currentStyle: { ...appliedPaint },
       colormap: config.colormap,
       rescale: config.rescale ?? undefined,
       sourceId,

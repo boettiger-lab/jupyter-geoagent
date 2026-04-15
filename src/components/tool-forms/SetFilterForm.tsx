@@ -41,6 +41,10 @@ export const SetFilterForm: React.FC<SetFilterFormProps> = ({
   const setFilterDesc = meta['set_filter']?.description ?? '';
 
   const apply = () => {
+    if (!text.trim()) {
+      setError('Enter a MapLibre filter expression, or use Clear to remove any filter.');
+      return;
+    }
     let parsed: any;
     try {
       parsed = JSON.parse(text);
