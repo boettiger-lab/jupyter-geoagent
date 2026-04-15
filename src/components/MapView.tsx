@@ -213,6 +213,116 @@ export class MapViewController {
     return true;
   }
 
+  setOpacity(layerId: string, opacity: number): boolean {
+    const state = this.layers.get(layerId);
+    if (!state || !this.map.getLayer(layerId)) return false;
+
+    if (state.type === 'vector') {
+      this.map.setPaintProperty(layerId, 'fill-opacity', opacity);
+      if (this.map.getLayer(`${layerId}-outline`)) {
+        this.map.setPaintProperty(`${layerId}-outline`, 'line-opacity', opacity);
+      }
+    } else if (state.type === 'raster') {
+      this.map.setPaintProperty(layerId, 'raster-opacity', opacity);
+    }
+    state.opacity = opacity;
+    return true;
+  }
+
+  setFillColor(layerId: string, color: string): boolean {
+    const state = this.layers.get(layerId);
+    if (!state || state.type !== 'vector' || !this.map.getLayer(layerId)) return false;
+    this.map.setPaintProperty(layerId, 'fill-color', color);
+    state.fillColor = color;
+    return true;
+  }
+
+  private _retileRaster(layerId: string): boolean {
+    const state = this.layers.get(layerId);
+    if (!state || state.type !== 'raster' || !state.cogUrl || !state.titilerUrl) return false;
+
+    let tilesUrl = `${state.titilerUrl}/cog/tiles/WebMercatorQuad/{z}/{x}/{y}.png?url=${encodeURIComponent(state.cogUrl)}`;
+    tilesUrl += `&colormap_name=${state.colormap || 'reds'}`;
+    if (state.rescale) tilesUrl += `&rescale=${state.rescale}`;
+
+    const source = this.map.getSource(state.sourceId) as maplibregl.RasterTileSource | undefined;
+    if (!source || typeof (source as any).setTiles !== 'function') return false;
+    (source as any).setTiles([tilesUrl]);
+    return true;
+  }
+
+  setColormap(layerId: string, colormap: string): boolean {
+    const state = this.layers.get(layerId);
+    if (!state || state.type !== 'raster') return false;
+    state.colormap = colormap;
+    return this._retileRaster(layerId);
+  }
+
+  setRescale(layerId: string, rescale: string | undefined): boolean {
+    const state = this.layers.get(layerId);
+    if (!state || state.type !== 'raster') return false;
+    state.rescale = rescale;
+    return this._retileRaster(layerId);
+  }
+
+  switchVersion(layerId: string, versionIndex: number): boolean {
+    const state = this.layers.get(layerId);
+    if (!state || !state.versions || versionIndex < 0 || versionIndex >= state.versions.length) return false;
+    const v = state.versions[versionIndex];
+
+    if (state.type === 'vector') {
+      const source = this.map.getSource(state.sourceId) as any;
+      if (!source) return false;
+      if (v.sourceType === 'geojson' && v.url) {
+        if (typeof source.setData === 'function') source.setData(v.url);
+        else return false;
+      } else if (v.url) {
+        if (typeof source.setUrl === 'function') source.setUrl(`pmtiles://${v.url}`);
+        else return false;
+      }
+      if (v.sourceLayer && v.sourceLayer !== state.sourceLayer) {
+        // MapLibre has no public setSourceLayer; remove & re-add both layers to swap source-layer.
+        const fill = this.map.getLayer(layerId);
+        const outline = this.map.getLayer(`${layerId}-outline`);
+        if (fill) this.map.removeLayer(layerId);
+        if (outline) this.map.removeLayer(`${layerId}-outline`);
+
+        const fillPaint = state.fillColor
+          ? { 'fill-color': state.fillColor, 'fill-opacity': state.opacity }
+          : { 'fill-color': '#2E7D32', 'fill-opacity': state.opacity };
+        this.map.addLayer({
+          id: layerId,
+          type: 'fill',
+          source: state.sourceId,
+          'source-layer': v.sourceLayer,
+          paint: fillPaint as any,
+          layout: { visibility: state.visible ? 'visible' : 'none' },
+        } as any);
+        this.map.addLayer({
+          id: `${layerId}-outline`,
+          type: 'line',
+          source: state.sourceId,
+          'source-layer': v.sourceLayer,
+          paint: { 'line-color': '#333', 'line-width': 0.5, 'line-opacity': state.opacity },
+          layout: { visibility: state.visible ? 'visible' : 'none' },
+        } as any);
+        if (state.filter) {
+          this.map.setFilter(layerId, state.filter as any);
+          this.map.setFilter(`${layerId}-outline`, state.filter as any);
+        }
+        state.sourceLayer = v.sourceLayer;
+      }
+    } else if (state.type === 'raster' && v.cogUrl) {
+      state.cogUrl = v.cogUrl;
+      this._retileRaster(layerId);
+    } else {
+      return false;
+    }
+
+    state.currentVersionIndex = versionIndex;
+    return true;
+  }
+
   flyTo(center: [number, number], zoom?: number): void {
     this.map.flyTo({ center, zoom: zoom || this.map.getZoom() });
   }
