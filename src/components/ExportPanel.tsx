@@ -121,7 +121,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
           type: (mapLayer as any).type,
           source: sourceId,
           ...(layer.sourceLayer ? { 'source-layer': layer.sourceLayer } : {}),
-          paint: layer.paint || {},
+          paint: layer.currentStyle ?? layer.defaultStyle ?? {},
           ...(layer.filter ? { filter: layer.filter } : {}),
         });
       }

@@ -57,9 +57,19 @@ class MCPProxyHandler(APIHandler):
 
         try:
             response = await client.fetch(request)
+            content_type = response.headers.get("Content-Type", "application/json")
+            body = response.body
+
+            # MCP Streamable HTTP transport often returns SSE: each message is
+            # `event: message\ndata: {...json...}\n\n`. Extract the JSON so
+            # the frontend can do response.json() regardless of upstream format.
+            if "text/event-stream" in content_type:
+                body = _sse_to_json(body)
+                content_type = "application/json"
+
             self.set_status(response.code)
-            self.set_header("Content-Type", response.headers.get("Content-Type", "application/json"))
-            self.finish(response.body)
+            self.set_header("Content-Type", content_type)
+            self.finish(body)
         except tornado.httpclient.HTTPError as e:
             self.set_status(e.code if e.code else 502)
             self.finish(json.dumps({
@@ -69,6 +79,24 @@ class MCPProxyHandler(APIHandler):
         except Exception as e:
             self.set_status(502)
             self.finish(json.dumps({"error": f"MCP proxy error: {str(e)}"}))
+
+
+def _sse_to_json(body: bytes) -> bytes:
+    """Extract the first JSON payload from an SSE response body.
+
+    SSE messages look like:
+        event: message
+        data: {"jsonrpc":"2.0","id":1,"result":{...}}
+        \n
+    For our request/response use case there's exactly one message per response,
+    so we return the first `data:` payload as raw JSON.
+    """
+    text = body.decode("utf-8", errors="replace")
+    for line in text.splitlines():
+        if line.startswith("data:"):
+            return line[5:].strip().encode("utf-8")
+    # Fallback: return original body (may be empty or malformed)
+    return body
 
 
 class HealthHandler(APIHandler):

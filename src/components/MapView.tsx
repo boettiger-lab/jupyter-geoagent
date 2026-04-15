@@ -11,6 +11,8 @@ import * as React from 'react';
 import maplibregl from 'maplibre-gl';
 import * as pmtiles from 'pmtiles';
 import { MapLayerConfig, LayerState, MapViewState } from '../core/types';
+import type { ColumnInfo } from 'geo-agent/app/dataset-catalog.js';
+import type { MCPClientWrapper } from '../core/mcp';
 
 const BASEMAPS: Record<string, { tiles: string[]; maxzoom: number }> = {
   natgeo: {
@@ -52,14 +54,24 @@ export class MapViewController {
   /**
    * Add a dataset layer to the map (from a processed MapLayerConfig).
    */
-  addLayer(datasetId: string, config: MapLayerConfig): string {
+  addLayer(datasetId: string, config: MapLayerConfig, columns: ColumnInfo[] = []): string {
     const layerId = `${datasetId}/${config.assetId}`;
     const sourceId = `src-${layerId.replace(/[^a-zA-Z0-9]/g, '-')}`;
 
     if (this.map.getSource(sourceId)) {
-      // Source already exists — just ensure layer is tracked
       return layerId;
     }
+
+    // Paint actually applied to the map — this must be the single source of
+    // truth for LayerState.defaultStyle / currentStyle so the Style form
+    // always has real content to show (not just a placeholder) for layers
+    // that don't supply their own default_style in STAC.
+    const appliedPaint: Record<string, any> =
+      config.defaultStyle
+        ? { ...config.defaultStyle }
+        : config.layerType === 'vector'
+          ? { 'fill-color': '#2E7D32', 'fill-opacity': 0.5 }
+          : { 'raster-opacity': 0.7 };
 
     if (config.layerType === 'vector') {
       if (config.sourceType === 'geojson') {
@@ -71,16 +83,11 @@ export class MapViewController {
         });
       }
 
-      const paint = config.defaultStyle || {
-        'fill-color': '#2E7D32',
-        'fill-opacity': 0.5,
-      };
-
       const layerDef: maplibregl.LayerSpecification = {
         id: layerId,
         type: 'fill',
         source: sourceId,
-        paint: paint as any,
+        paint: appliedPaint as any,
         layout: { visibility: config.defaultVisible ? 'visible' : 'none' },
       };
 
@@ -90,7 +97,6 @@ export class MapViewController {
 
       this.map.addLayer(layerDef);
 
-      // Add outline layer
       const outlineId = `${layerId}-outline`;
       const outlineDef: maplibregl.LayerSpecification = {
         id: outlineId,
@@ -119,22 +125,38 @@ export class MapViewController {
         id: layerId,
         type: 'raster',
         source: sourceId,
-        paint: { 'raster-opacity': 0.7 },
+        paint: appliedPaint as any,
         layout: { visibility: config.defaultVisible ? 'visible' : 'none' },
       });
     }
 
+    const initialOpacity = config.layerType === 'raster' ? 0.7 : 0.5;
+    const initialFillColor = config.layerType === 'vector'
+      ? (config.defaultStyle?.['fill-color'] as string | undefined) || '#2E7D32'
+      : undefined;
+
     this.layers.set(layerId, {
       id: layerId,
       datasetId,
+      assetId: config.assetId,
       displayName: config.title,
       type: config.layerType,
       visible: config.defaultVisible,
-      opacity: config.layerType === 'raster' ? 0.7 : 0.5,
+      opacity: initialOpacity,
+      fillColor: initialFillColor,
       filter: config.defaultFilter,
+      defaultFilter: config.defaultFilter,
+      defaultStyle: appliedPaint,
+      currentStyle: { ...appliedPaint },
+      colormap: config.colormap,
+      rescale: config.rescale ?? undefined,
       sourceId,
       sourceLayer: config.sourceLayer,
-      columns: [],
+      columns,
+      versions: config.versions,
+      currentVersionIndex: config.defaultVersionIndex,
+      titilerUrl: this.titilerUrl,
+      cogUrl: config.cogUrl,
     });
 
     return layerId;
@@ -196,6 +218,218 @@ export class MapViewController {
     }
     const state = this.layers.get(layerId);
     if (state) state.filter = undefined;
+    return true;
+  }
+
+  setOpacity(layerId: string, opacity: number): boolean {
+    const state = this.layers.get(layerId);
+    if (!state || !this.map.getLayer(layerId)) return false;
+
+    if (state.type === 'vector') {
+      this.map.setPaintProperty(layerId, 'fill-opacity', opacity);
+      if (this.map.getLayer(`${layerId}-outline`)) {
+        this.map.setPaintProperty(`${layerId}-outline`, 'line-opacity', opacity);
+      }
+    } else if (state.type === 'raster') {
+      this.map.setPaintProperty(layerId, 'raster-opacity', opacity);
+    }
+    state.opacity = opacity;
+    // Sync opacity into currentStyle to prevent SetStyleForm drift
+    if (state.currentStyle) {
+      if (state.type === 'vector') {
+        state.currentStyle['fill-opacity'] = opacity;
+      } else if (state.type === 'raster') {
+        state.currentStyle['raster-opacity'] = opacity;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Apply a MapLibre paint object to a layer. Spreads each key via
+   * setPaintProperty so unspecified keys are left untouched. Updates
+   * state.currentStyle to the merged result.
+   */
+  setStyle(layerId: string, style: Record<string, any>): boolean {
+    const state = this.layers.get(layerId);
+    if (!state || !this.map.getLayer(layerId)) return false;
+    for (const [key, value] of Object.entries(style)) {
+      try {
+        this.map.setPaintProperty(layerId, key, value);
+      } catch (err) {
+        // Re-throw so caller (the form) can surface the error inline.
+        throw err;
+      }
+    }
+    state.currentStyle = { ...(state.currentStyle ?? {}), ...style };
+    // Keep the derived scalar fields in sync for the bespoke controls.
+    if (typeof style['fill-opacity'] === 'number') state.opacity = style['fill-opacity'];
+    if (typeof style['raster-opacity'] === 'number') state.opacity = style['raster-opacity'];
+    if (typeof style['fill-color'] === 'string') state.fillColor = style['fill-color'];
+    return true;
+  }
+
+  /**
+   * Reapply the paint object the layer was created with.
+   */
+  resetStyle(layerId: string): boolean {
+    const state = this.layers.get(layerId);
+    if (!state || !state.defaultStyle) return false;
+    return this.setStyle(layerId, state.defaultStyle);
+  }
+
+  /**
+   * Apply the config default filter, or clear if none.
+   */
+  resetFilter(layerId: string): boolean {
+    const state = this.layers.get(layerId);
+    if (!state) return false;
+    if (state.defaultFilter) return this.setFilter(layerId, state.defaultFilter);
+    return this.clearFilter(layerId);
+  }
+
+  /**
+   * Filter a vector layer by the results of a SQL query, via MCP.
+   * Ports node_modules/geo-agent/app/map-tools.js filter_by_query.execute.
+   * The ID array stays on the client — never passes through the LLM.
+   */
+  async filterByQuery(
+    layerId: string,
+    sql: string,
+    idProperty: string,
+    mcpClient: MCPClientWrapper,
+  ): Promise<
+    | { success: true; idCount: number; message?: string }
+    | { success: false; error: string }
+  > {
+    const state = this.layers.get(layerId);
+    if (!state || state.type !== 'vector') {
+      return { success: false, error: `Layer ${layerId} is not a vector layer.` };
+    }
+
+    const col = idProperty;
+    const wrappedSql = `SELECT array_agg("${col}") FILTER (WHERE "${col}" IS NOT NULL) FROM (${sql}) _filter_subquery`;
+
+    let rawResult: string;
+    try {
+      rawResult = await mcpClient.callTool('query', { sql_query: wrappedSql });
+    } catch (err: any) {
+      return { success: false, error: `SQL execution failed: ${err.message}` };
+    }
+
+    // DuckDB returns NULL (not []) when no rows match.
+    const trimmed = rawResult.trim();
+    if (!trimmed || /\bnull\b/i.test(trimmed.replace(/.*\n/, ''))) {
+      return { success: true, idCount: 0, message: 'Query matched no features — filter not applied.' };
+    }
+
+    // Extract the JSON array from the MCP response (same heuristic as geo-agent).
+    const match = rawResult.match(/\[[\s\S]*\]/);
+    if (!match) {
+      return {
+        success: false,
+        error: `Could not parse ID list from query result. Check that id_property ("${col}") exactly matches the column name in the SQL output. Raw: ${rawResult.substring(0, 300)}`,
+      };
+    }
+    let ids: any[];
+    try {
+      ids = JSON.parse(match[0]);
+    } catch {
+      return {
+        success: false,
+        error: `Could not parse ID list from query result. Raw: ${rawResult.substring(0, 300)}`,
+      };
+    }
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return { success: true, idCount: 0, message: 'Query matched no features — filter not applied.' };
+    }
+
+    const filter: any[] = ['in', ['get', col], ['literal', ids]];
+    this.setFilter(layerId, filter);
+    return { success: true, idCount: ids.length };
+  }
+
+  private _retileRaster(layerId: string): boolean {
+    const state = this.layers.get(layerId);
+    if (!state || state.type !== 'raster' || !state.cogUrl || !state.titilerUrl) return false;
+
+    let tilesUrl = `${state.titilerUrl}/cog/tiles/WebMercatorQuad/{z}/{x}/{y}.png?url=${encodeURIComponent(state.cogUrl)}`;
+    tilesUrl += `&colormap_name=${state.colormap || 'reds'}`;
+    if (state.rescale) tilesUrl += `&rescale=${state.rescale}`;
+
+    const source = this.map.getSource(state.sourceId) as maplibregl.RasterTileSource | undefined;
+    if (!source || typeof (source as any).setTiles !== 'function') return false;
+    (source as any).setTiles([tilesUrl]);
+    return true;
+  }
+
+  setColormap(layerId: string, colormap: string): boolean {
+    const state = this.layers.get(layerId);
+    if (!state || state.type !== 'raster') return false;
+    state.colormap = colormap;
+    return this._retileRaster(layerId);
+  }
+
+  setRescale(layerId: string, rescale: string | undefined): boolean {
+    const state = this.layers.get(layerId);
+    if (!state || state.type !== 'raster') return false;
+    state.rescale = rescale;
+    return this._retileRaster(layerId);
+  }
+
+  switchVersion(layerId: string, versionIndex: number): boolean {
+    const state = this.layers.get(layerId);
+    if (!state || !state.versions || versionIndex < 0 || versionIndex >= state.versions.length) return false;
+    const v = state.versions[versionIndex];
+
+    if (state.type === 'vector') {
+      const source = this.map.getSource(state.sourceId) as any;
+      if (!source) return false;
+      if (v.sourceType === 'geojson' && v.url) {
+        if (typeof source.setData === 'function') source.setData(v.url);
+        else return false;
+      } else if (v.url) {
+        if (typeof source.setUrl === 'function') source.setUrl(`pmtiles://${v.url}`);
+        else return false;
+      }
+      if (v.sourceLayer && v.sourceLayer !== state.sourceLayer) {
+        // MapLibre has no public setSourceLayer; remove & re-add both layers to swap source-layer.
+        const fill = this.map.getLayer(layerId);
+        const outline = this.map.getLayer(`${layerId}-outline`);
+        if (fill) this.map.removeLayer(layerId);
+        if (outline) this.map.removeLayer(`${layerId}-outline`);
+
+        const fillPaint = state.currentStyle ?? { 'fill-color': '#2E7D32', 'fill-opacity': state.opacity };
+        this.map.addLayer({
+          id: layerId,
+          type: 'fill',
+          source: state.sourceId,
+          'source-layer': v.sourceLayer,
+          paint: fillPaint as any,
+          layout: { visibility: state.visible ? 'visible' : 'none' },
+        } as any);
+        this.map.addLayer({
+          id: `${layerId}-outline`,
+          type: 'line',
+          source: state.sourceId,
+          'source-layer': v.sourceLayer,
+          paint: { 'line-color': '#333', 'line-width': 0.5, 'line-opacity': state.opacity },
+          layout: { visibility: state.visible ? 'visible' : 'none' },
+        } as any);
+        if (state.filter) {
+          this.map.setFilter(layerId, state.filter as any);
+          this.map.setFilter(`${layerId}-outline`, state.filter as any);
+        }
+        state.sourceLayer = v.sourceLayer;
+      }
+    } else if (state.type === 'raster' && v.cogUrl) {
+      state.cogUrl = v.cogUrl;
+      this._retileRaster(layerId);
+    } else {
+      return false;
+    }
+
+    state.currentVersionIndex = versionIndex;
     return true;
   }
 

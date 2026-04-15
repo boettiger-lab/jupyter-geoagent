@@ -55,15 +55,37 @@ export interface MapViewState {
 export interface LayerState {
   id: string;
   datasetId: string;
+  assetId: string;
   displayName: string;
   type: 'vector' | 'raster';
   visible: boolean;
   opacity: number;
+  fillColor?: string;
   filter?: any[];
-  paint?: Record<string, any>;
+  defaultFilter?: any[];
+  /** Original paint from MapLayerConfig.defaultStyle — never mutated after addLayer. */
+  defaultStyle?: Record<string, any>;
+  /** Live paint: seeded from defaultStyle, updated by setStyle. */
+  currentStyle?: Record<string, any>;
+  colormap?: string;
+  rescale?: string;
   sourceId: string;
   sourceLayer?: string;
   columns: ColumnInfo[];
+  versions?: Array<{
+    label: string;
+    assetId: string;
+    layerType: string;
+    url?: string;
+    cogUrl?: string;
+    sourceLayer?: string;
+    sourceType?: string;
+  }>;
+  currentVersionIndex?: number;
+  /** TiTiler base URL captured at layer creation, so raster retile calls don't need to thread it through. */
+  titilerUrl?: string;
+  /** The original COG url (raster only), kept so we can rebuild the tiles URL on colormap/rescale change. */
+  cogUrl?: string;
 }
 
 // ── Export formats ──

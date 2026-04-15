@@ -13,7 +13,14 @@ import {
 
 import { ILauncher } from '@jupyterlab/launcher';
 import { WidgetTracker } from '@jupyterlab/apputils';
+import { LabIcon } from '@jupyterlab/ui-components';
 import { GeoAgentPanel } from './panel';
+import geoagentIconSvg from '../style/geoagent-icon.svg';
+
+const geoagentIcon = new LabIcon({
+  name: 'geoagent:icon',
+  svgstr: geoagentIconSvg,
+});
 
 const COMMAND_ID = 'geoagent:open';
 const PLUGIN_ID = '@boettiger-lab/jupyter-geoagent:plugin';
@@ -22,8 +29,8 @@ const PLUGIN_ID = '@boettiger-lab/jupyter-geoagent:plugin';
 const DEFAULTS = {
   catalogUrl: 'https://s3-west.nrp-nautilus.io/public-data/stac/catalog.json',
   titilerUrl: 'https://titiler.nrp-nautilus.io',
-  mcpServerUrl: '',
-  useProxy: false,
+  mcpServerUrl: 'https://duckdb-mcp.nrp-nautilus.io/mcp',
+  useProxy: true,
 };
 
 const plugin: JupyterFrontEndPlugin<void> = {
@@ -50,6 +57,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     app.commands.addCommand(COMMAND_ID, {
       label: 'GeoAgent Map',
+      icon: geoagentIcon,
       caption: 'Open an interactive geospatial map explorer',
       execute: () => {
         const panel = new GeoAgentPanel({
