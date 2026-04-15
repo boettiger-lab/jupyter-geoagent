@@ -238,6 +238,49 @@ export class MapViewController {
     return true;
   }
 
+  /**
+   * Apply a MapLibre paint object to a layer. Spreads each key via
+   * setPaintProperty so unspecified keys are left untouched. Updates
+   * state.currentStyle to the merged result.
+   */
+  setStyle(layerId: string, style: Record<string, any>): boolean {
+    const state = this.layers.get(layerId);
+    if (!state || !this.map.getLayer(layerId)) return false;
+    for (const [key, value] of Object.entries(style)) {
+      try {
+        this.map.setPaintProperty(layerId, key, value);
+      } catch (err) {
+        // Re-throw so caller (the form) can surface the error inline.
+        throw err;
+      }
+    }
+    state.currentStyle = { ...(state.currentStyle ?? {}), ...style };
+    // Keep the derived scalar fields in sync for the bespoke controls.
+    if (typeof style['fill-opacity'] === 'number') state.opacity = style['fill-opacity'];
+    if (typeof style['raster-opacity'] === 'number') state.opacity = style['raster-opacity'];
+    if (typeof style['fill-color'] === 'string') state.fillColor = style['fill-color'];
+    return true;
+  }
+
+  /**
+   * Reapply the paint object the layer was created with.
+   */
+  resetStyle(layerId: string): boolean {
+    const state = this.layers.get(layerId);
+    if (!state || !state.defaultStyle) return false;
+    return this.setStyle(layerId, state.defaultStyle);
+  }
+
+  /**
+   * Apply the config default filter, or clear if none.
+   */
+  resetFilter(layerId: string): boolean {
+    const state = this.layers.get(layerId);
+    if (!state) return false;
+    if (state.defaultFilter) return this.setFilter(layerId, state.defaultFilter);
+    return this.clearFilter(layerId);
+  }
+
   private _retileRaster(layerId: string): boolean {
     const state = this.layers.get(layerId);
     if (!state || state.type !== 'raster' || !state.cogUrl || !state.titilerUrl) return false;
