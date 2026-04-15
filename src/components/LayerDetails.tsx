@@ -20,11 +20,50 @@ export interface LayerDetailsProps {
   onChange: () => void;
 }
 
-export const LayerDetails: React.FC<LayerDetailsProps> = ({ layer }) => {
+export const LayerDetails: React.FC<LayerDetailsProps> = ({
+  layer,
+  mapController,
+  recorder,
+  onChange,
+}) => {
+  const handleOpacity = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = parseFloat(e.target.value);
+    if (!mapController) return;
+    mapController.setOpacity(layer.id, v);
+    recorder.record('set_opacity', { layer_id: layer.id, opacity: v });
+    onChange();
+  };
+
   return (
     <div className="jp-GeoAgent-layer-details">
       <h4>Layer Details</h4>
       <div className="jp-GeoAgent-layer-details-name">{layer.displayName}</div>
+
+      <div className="jp-GeoAgent-field">
+        <div className="jp-GeoAgent-field-label">
+          <span>Opacity</span>
+          <span>{layer.opacity.toFixed(2)}</span>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={layer.opacity}
+          onChange={handleOpacity}
+        />
+      </div>
+
+      {layer.defaultFilter && (
+        <div className="jp-GeoAgent-field">
+          <div className="jp-GeoAgent-field-label">
+            <span>Default filter</span>
+          </div>
+          <div className="jp-GeoAgent-filter-readonly">
+            {JSON.stringify(layer.defaultFilter)}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
