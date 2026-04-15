@@ -227,6 +227,14 @@ export class MapViewController {
       this.map.setPaintProperty(layerId, 'raster-opacity', opacity);
     }
     state.opacity = opacity;
+    // Sync opacity into currentStyle to prevent SetStyleForm drift
+    if (state.currentStyle) {
+      if (state.type === 'vector') {
+        state.currentStyle['fill-opacity'] = opacity;
+      } else if (state.type === 'raster') {
+        state.currentStyle['raster-opacity'] = opacity;
+      }
+    }
     return true;
   }
 
