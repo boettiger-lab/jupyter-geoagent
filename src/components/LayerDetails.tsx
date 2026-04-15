@@ -1,8 +1,9 @@
 /**
  * LayerDetails — detail pane rendered at the bottom of the LayerPanel
  * when a layer is selected. Exposes per-layer config: version switcher,
- * opacity slider, SetStyleForm, SetFilterForm (vector), colormap and
- * rescale (raster).
+ * SetStyleForm, SetFilterForm (vector), opacity slider, colormap, and
+ * rescale (raster). Vector opacity is edited via the Style form's
+ * fill-opacity key rather than a dedicated slider.
  */
 
 import * as React from 'react';
@@ -111,21 +112,6 @@ export const LayerDetails: React.FC<LayerDetailsProps> = ({
         </div>
       )}
 
-      <div className="jp-GeoAgent-field">
-        <div className="jp-GeoAgent-field-label">
-          <span>Opacity</span>
-          <span>{layer.opacity.toFixed(2)}</span>
-        </div>
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.05}
-          value={layer.opacity}
-          onChange={handleOpacity}
-        />
-      </div>
-
       {layer.type === 'vector' && (
         <SetStyleForm
           layer={layer}
@@ -156,6 +142,21 @@ export const LayerDetails: React.FC<LayerDetailsProps> = ({
 
       {layer.type === 'raster' && (
         <>
+          <div className="jp-GeoAgent-field">
+            <div className="jp-GeoAgent-field-label">
+              <span>Opacity</span>
+              <span>{layer.opacity.toFixed(2)}</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={layer.opacity}
+              onChange={handleOpacity}
+            />
+          </div>
+
           <div className="jp-GeoAgent-field">
             <div className="jp-GeoAgent-field-label">
               <span>Colormap</span>
