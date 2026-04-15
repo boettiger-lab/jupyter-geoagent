@@ -34,6 +34,14 @@ export const LayerDetails: React.FC<LayerDetailsProps> = ({
     onChange();
   };
 
+  const handleFillColor = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const c = e.target.value;
+    if (!mapController) return;
+    mapController.setFillColor(layer.id, c);
+    recorder.record('set_fill_color', { layer_id: layer.id, color: c });
+    onChange();
+  };
+
   return (
     <div className="jp-GeoAgent-layer-details">
       <h4>Layer Details</h4>
@@ -53,6 +61,20 @@ export const LayerDetails: React.FC<LayerDetailsProps> = ({
           onChange={handleOpacity}
         />
       </div>
+
+      {layer.type === 'vector' && (
+        <div className="jp-GeoAgent-field">
+          <div className="jp-GeoAgent-field-label">
+            <span>Fill color</span>
+            <span>{layer.fillColor ?? '—'}</span>
+          </div>
+          <input
+            type="color"
+            value={layer.fillColor ?? '#2E7D32'}
+            onChange={handleFillColor}
+          />
+        </div>
+      )}
 
       {layer.defaultFilter && (
         <div className="jp-GeoAgent-field">
