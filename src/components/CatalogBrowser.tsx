@@ -92,7 +92,7 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
       if (!dataset) return;
 
       for (const layer of dataset.mapLayers) {
-        const layerId = mapController.addLayer(dataset.id, layer);
+        const layerId = mapController.addLayer(dataset.id, layer, dataset.columns);
         mapController.showLayer(layerId);
         recorder.record('show_layer', { layer_id: layerId });
       }

@@ -11,6 +11,7 @@ import * as React from 'react';
 import maplibregl from 'maplibre-gl';
 import * as pmtiles from 'pmtiles';
 import { MapLayerConfig, LayerState, MapViewState } from '../core/types';
+import type { ColumnInfo } from 'geo-agent/app/dataset-catalog.js';
 
 const BASEMAPS: Record<string, { tiles: string[]; maxzoom: number }> = {
   natgeo: {
@@ -52,12 +53,11 @@ export class MapViewController {
   /**
    * Add a dataset layer to the map (from a processed MapLayerConfig).
    */
-  addLayer(datasetId: string, config: MapLayerConfig): string {
+  addLayer(datasetId: string, config: MapLayerConfig, columns: ColumnInfo[] = []): string {
     const layerId = `${datasetId}/${config.assetId}`;
     const sourceId = `src-${layerId.replace(/[^a-zA-Z0-9]/g, '-')}`;
 
     if (this.map.getSource(sourceId)) {
-      // Source already exists — just ensure layer is tracked
       return layerId;
     }
 
@@ -90,7 +90,6 @@ export class MapViewController {
 
       this.map.addLayer(layerDef);
 
-      // Add outline layer
       const outlineId = `${layerId}-outline`;
       const outlineDef: maplibregl.LayerSpecification = {
         id: outlineId,
@@ -124,17 +123,32 @@ export class MapViewController {
       });
     }
 
+    const initialOpacity = config.layerType === 'raster' ? 0.7 : 0.5;
+    const initialFillColor = config.layerType === 'vector'
+      ? (config.defaultStyle?.['fill-color'] as string | undefined) || '#2E7D32'
+      : undefined;
+
     this.layers.set(layerId, {
       id: layerId,
       datasetId,
+      assetId: config.assetId,
       displayName: config.title,
       type: config.layerType,
       visible: config.defaultVisible,
-      opacity: config.layerType === 'raster' ? 0.7 : 0.5,
+      opacity: initialOpacity,
+      fillColor: initialFillColor,
       filter: config.defaultFilter,
+      defaultFilter: config.defaultFilter,
+      paint: config.defaultStyle,
+      colormap: config.colormap,
+      rescale: config.rescale ?? undefined,
       sourceId,
       sourceLayer: config.sourceLayer,
-      columns: [],
+      columns,
+      versions: config.versions,
+      currentVersionIndex: config.defaultVersionIndex,
+      titilerUrl: this.titilerUrl,
+      cogUrl: config.cogUrl,
     });
 
     return layerId;
