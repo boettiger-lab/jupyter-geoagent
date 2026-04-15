@@ -30,6 +30,23 @@ export interface CatalogNode {
 /** Flat-compat alias used by components that don't need the tree. */
 export type CollectionStub = CatalogNode;
 
+/**
+ * Should this STAC link be treated as a child (sub-catalog/collection)?
+ *
+ * Standard STAC uses rel=child for sub-catalogs. But some published catalogs
+ * (e.g. NRP Nautilus "American Rivers") use rel=item with hrefs that point
+ * to nested collection.json / catalog.json files instead of true Items.
+ * Treat those as children so the UI shows an expand affordance.
+ */
+function isChildLink(link: any): boolean {
+  if (!link || typeof link.href !== 'string') return false;
+  if (link.rel === 'child') return true;
+  if (link.rel === 'item') {
+    return /(?:stac-)?(?:collection|catalog)\.json(?:\?.*)?$/i.test(link.href);
+  }
+  return false;
+}
+
 export class STACBrowser {
   catalogUrl: string;
   titilerUrl: string;
@@ -56,7 +73,7 @@ export class STACBrowser {
    */
   async listChildren(url: string): Promise<CatalogNode[]> {
     const json = await this.fetchJson(url);
-    const childLinks = (json.links || []).filter((l: any) => l.rel === 'child');
+    const childLinks = (json.links || []).filter(isChildLink);
 
     const results = await Promise.allSettled(
       childLinks.map(async (link: any) => {
@@ -64,7 +81,7 @@ export class STACBrowser {
         const col = await this.fetchJson(childUrl);
         this._rawCollections.set(col.id, col);
 
-        const grandChildLinks = (col.links || []).filter((l: any) => l.rel === 'child');
+        const grandChildLinks = (col.links || []).filter(isChildLink);
 
         return {
           id: col.id,
