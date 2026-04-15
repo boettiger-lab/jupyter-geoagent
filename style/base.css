@@ -216,6 +216,7 @@ h3 {
 .jp-GeoAgent-layer-item {
   padding: 6px 0;
   border-bottom: 1px solid var(--jp-border-color2);
+  cursor: pointer;
 }
 
 .jp-GeoAgent-layer-header {
@@ -330,10 +331,6 @@ h3 {
 }
 
 /* ── Layer selection & detail pane ── */
-
-.jp-GeoAgent-layer-item {
-  cursor: pointer;
-}
 
 .jp-GeoAgent-layer-item:hover {
   background: var(--jp-layout-color2);

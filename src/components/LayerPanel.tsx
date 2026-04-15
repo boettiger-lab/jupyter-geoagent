@@ -54,7 +54,7 @@ export const LayerPanel: React.FC<LayerPanelProps> = ({
   const removeLayer = React.useCallback((layer: LayerState) => {
     if (!mapController) return;
     mapController.removeLayer(layer.id);
-    recorder.record('hide_layer', { layer_id: layer.id });
+    recorder.record('remove_layer', { layer_id: layer.id });
     if (selectedId === layer.id) setSelectedId(null);
     forceUpdate();
   }, [mapController, recorder, selectedId]);
