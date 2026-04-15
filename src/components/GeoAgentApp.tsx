@@ -38,6 +38,8 @@ export const GeoAgentApp: React.FC<GeoAgentAppProps> = ({
   const [mcpClient, setMcpClient] = React.useState<MCPClientWrapper | null>(null);
   const [activeTab, setActiveTab] = React.useState<RightTab>('layers');
   const [layerRefreshKey, setLayerRefreshKey] = React.useState(0);
+  const [pendingLayerSelection, setPendingLayerSelection] =
+    React.useState<{ id: string; seq: number } | null>(null);
 
   const recorderRef = React.useRef(new ToolCallRecorder(defaultCatalogUrl));
 
@@ -56,8 +58,15 @@ export const GeoAgentApp: React.FC<GeoAgentAppProps> = ({
       .catch(e => console.warn('[GeoAgent] MCP connection failed:', e.message));
   }, [mcpServerUrl, mcpHeaders, useProxy, serverSettings]);
 
-  const handleDatasetAdded = React.useCallback(() => {
+  const handleDatasetAdded = React.useCallback((_datasetId: string, firstLayerId?: string) => {
     setLayerRefreshKey(k => k + 1);
+    // Reveal the detail pane for the newly-added layer: switch to the Layers
+    // tab and ask the panel to select it. The seq counter guarantees the
+    // panel's effect re-fires even if the same id is queued twice in a row.
+    if (firstLayerId) {
+      setActiveTab('layers');
+      setPendingLayerSelection(prev => ({ id: firstLayerId, seq: (prev?.seq ?? 0) + 1 }));
+    }
   }, []);
 
   const handleMapReady = React.useCallback((ctrl: MapViewController) => {
@@ -119,6 +128,7 @@ export const GeoAgentApp: React.FC<GeoAgentAppProps> = ({
               mapController={mapController}
               recorder={recorderRef.current}
               refreshKey={layerRefreshKey}
+              pendingSelection={pendingLayerSelection}
             />
           )}
           {activeTab === 'query' && (

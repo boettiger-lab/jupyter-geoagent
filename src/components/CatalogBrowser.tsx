@@ -15,7 +15,12 @@ export interface CatalogBrowserProps {
   titilerUrl: string;
   mapController: MapViewController | null;
   recorder: ToolCallRecorder;
-  onDatasetAdded?: (datasetId: string) => void;
+  /**
+   * Called after a dataset's layers have been added to the map.
+   * `firstLayerId` is the id of the first map layer created (if any),
+   * so the host can auto-select it in the LayerPanel.
+   */
+  onDatasetAdded?: (datasetId: string, firstLayerId?: string) => void;
 }
 
 export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
@@ -91,10 +96,12 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
       const dataset = await browserRef.current.getDataset(collectionId);
       if (!dataset) return;
 
+      let firstLayerId: string | undefined;
       for (const layer of dataset.mapLayers) {
         const layerId = mapController.addLayer(dataset.id, layer, dataset.columns);
         mapController.showLayer(layerId);
         recorder.record('show_layer', { layer_id: layerId });
+        if (!firstLayerId) firstLayerId = layerId;
       }
 
       if (dataset.extent?.spatial?.bbox?.[0]) {
@@ -105,7 +112,7 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
       }
 
       setAddedIds(prev => new Set([...prev, collectionId]));
-      if (onDatasetAdded) onDatasetAdded(collectionId);
+      if (onDatasetAdded) onDatasetAdded(collectionId, firstLayerId);
     } catch (e: any) {
       console.error(`Failed to add collection ${collectionId}:`, e);
     }

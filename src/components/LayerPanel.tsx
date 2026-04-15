@@ -16,15 +16,28 @@ export interface LayerPanelProps {
   recorder: ToolCallRecorder;
   /** Increment this to force re-render when layers change externally */
   refreshKey: number;
+  /**
+   * External request to reveal a specific layer's details (e.g. after a
+   * dataset was added from the catalog). The seq counter ensures the
+   * effect fires even if the same id is queued twice in a row.
+   */
+  pendingSelection?: { id: string; seq: number } | null;
 }
 
 export const LayerPanel: React.FC<LayerPanelProps> = ({
   mapController,
   recorder,
   refreshKey,
+  pendingSelection,
 }) => {
   const [, forceUpdate] = React.useReducer(x => x + 1, 0);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
+
+  // External selection requests (e.g. "the dataset just added") win over
+  // whatever the user last clicked.
+  React.useEffect(() => {
+    if (pendingSelection) setSelectedId(pendingSelection.id);
+  }, [pendingSelection]);
 
   const layers = React.useMemo(() => {
     if (!mapController) return [];
