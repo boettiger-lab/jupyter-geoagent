@@ -328,3 +328,73 @@ h3 {
   width: 100%;
   text-align: left;
 }
+
+/* ── Layer selection & detail pane ── */
+
+.jp-GeoAgent-layer-item {
+  cursor: pointer;
+}
+
+.jp-GeoAgent-layer-item:hover {
+  background: var(--jp-layout-color2);
+}
+
+.jp-GeoAgent-layer-item-selected {
+  background: var(--jp-layout-color2);
+  border-left: 3px solid var(--jp-brand-color1);
+  padding-left: 5px;
+}
+
+.jp-GeoAgent-layer-details {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--jp-border-color1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jp-GeoAgent-layer-details h4 {
+  margin: 0;
+  font-size: var(--jp-ui-font-size1);
+  color: var(--jp-ui-font-color0);
+}
+
+.jp-GeoAgent-layer-details-name {
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-ui-font-color2);
+}
+
+.jp-GeoAgent-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jp-GeoAgent-field-label {
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-ui-font-color2);
+  display: flex;
+  justify-content: space-between;
+}
+
+.jp-GeoAgent-field-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.jp-GeoAgent-field-row input[type="number"] {
+  width: 80px;
+}
+
+.jp-GeoAgent-filter-readonly {
+  font-family: var(--jp-code-font-family);
+  font-size: var(--jp-code-font-size);
+  background: var(--jp-layout-color0);
+  border: 1px solid var(--jp-border-color2);
+  border-radius: 3px;
+  padding: 4px 6px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
