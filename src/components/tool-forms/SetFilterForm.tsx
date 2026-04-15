@@ -84,16 +84,10 @@ export const SetFilterForm: React.FC<SetFilterFormProps> = ({
     onChange();
   };
 
-  const currentText = layer.filter ? JSON.stringify(layer.filter) : '(none)';
-
   return (
     <div className="jp-GeoAgent-field jp-GeoAgent-tool-form">
       <div className="jp-GeoAgent-field-label">
         <span>Filter</span>
-      </div>
-      <div className="jp-GeoAgent-tool-form-current">
-        <span className="jp-GeoAgent-field-label">Current:</span>{' '}
-        <code>{currentText}</code>
       </div>
       <textarea
         className="jp-GeoAgent-textarea"

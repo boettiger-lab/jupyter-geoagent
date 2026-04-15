@@ -74,16 +74,10 @@ export const SetStyleForm: React.FC<SetStyleFormProps> = ({
     onChange();
   };
 
-  const currentText = format(layer.currentStyle) || '(none)';
-
   return (
     <div className="jp-GeoAgent-field jp-GeoAgent-tool-form">
       <div className="jp-GeoAgent-field-label">
         <span>Style</span>
-      </div>
-      <div className="jp-GeoAgent-tool-form-current">
-        <span className="jp-GeoAgent-field-label">Current:</span>
-        <pre className="jp-GeoAgent-filter-readonly">{currentText}</pre>
       </div>
       <textarea
         className="jp-GeoAgent-textarea"

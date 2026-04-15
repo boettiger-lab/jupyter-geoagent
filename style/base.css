@@ -385,38 +385,12 @@ h3 {
   width: 80px;
 }
 
-.jp-GeoAgent-filter-readonly {
-  font-family: var(--jp-code-font-family);
-  font-size: var(--jp-code-font-size);
-  background: var(--jp-layout-color0);
-  border: 1px solid var(--jp-border-color2);
-  border-radius: 3px;
-  padding: 4px 6px;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
 /* ── Tool forms ── */
 
 .jp-GeoAgent-tool-form {
   margin-top: 12px;
   padding-top: 8px;
   border-top: 1px solid var(--jp-border-color1);
-}
-
-.jp-GeoAgent-tool-form-current {
-  font-size: var(--jp-ui-font-size0);
-  color: var(--jp-ui-font-color2);
-  margin-bottom: 4px;
-  overflow-x: auto;
-}
-
-.jp-GeoAgent-tool-form-current code {
-  font-family: var(--jp-code-font-family);
-  font-size: var(--jp-code-font-size);
-  background: var(--jp-layout-color0);
-  padding: 1px 4px;
-  border-radius: 2px;
 }
 
 .jp-GeoAgent-tool-form-help {
