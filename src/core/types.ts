@@ -63,7 +63,10 @@ export interface LayerState {
   fillColor?: string;
   filter?: any[];
   defaultFilter?: any[];
-  paint?: Record<string, any>;
+  /** Original paint from MapLayerConfig.defaultStyle — never mutated after addLayer. */
+  defaultStyle?: Record<string, any>;
+  /** Live paint: seeded from defaultStyle, updated by setStyle. */
+  currentStyle?: Record<string, any>;
   colormap?: string;
   rescale?: string;
   sourceId: string;
