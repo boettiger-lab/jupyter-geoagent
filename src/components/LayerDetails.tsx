@@ -1,10 +1,8 @@
 /**
  * LayerDetails — detail pane rendered at the bottom of the LayerPanel
- * when a layer is selected. Exposes per-layer config: opacity, fill color,
- * default_filter display, categorical filter builder, colormap / rescale,
- * and version switcher.
- *
- * Tiers 1 and 2 from boettiger-lab/jupyter-geoagent#3.
+ * when a layer is selected. Exposes per-layer config: version switcher,
+ * opacity slider, SetStyleForm, SetFilterForm (vector), colormap and
+ * rescale (raster).
  */
 
 import * as React from 'react';
@@ -12,6 +10,7 @@ import { LayerState } from '../core/types';
 import { MapViewController } from './MapView';
 import { ToolCallRecorder } from '../core/tools';
 import { SetFilterForm } from './tool-forms/SetFilterForm';
+import { SetStyleForm } from './tool-forms/SetStyleForm';
 
 export interface LayerDetailsProps {
   layer: LayerState;
@@ -86,14 +85,6 @@ export const LayerDetails: React.FC<LayerDetailsProps> = ({
     onChange();
   };
 
-  const handleFillColor = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const c = e.target.value;
-    if (!mapController) return;
-    mapController.setFillColor(layer.id, c);
-    recorder.record('set_fill_color', { layer_id: layer.id, color: c });
-    onChange();
-  };
-
   return (
     <div className="jp-GeoAgent-layer-details">
       <h4>Layer Details</h4>
@@ -132,17 +123,12 @@ export const LayerDetails: React.FC<LayerDetailsProps> = ({
       </div>
 
       {layer.type === 'vector' && (
-        <div className="jp-GeoAgent-field">
-          <div className="jp-GeoAgent-field-label">
-            <span>Fill color</span>
-            <span>{layer.fillColor ?? '—'}</span>
-          </div>
-          <input
-            type="color"
-            value={layer.fillColor ?? '#2E7D32'}
-            onChange={handleFillColor}
-          />
-        </div>
+        <SetStyleForm
+          layer={layer}
+          mapController={mapController!}
+          recorder={recorder}
+          onChange={onChange}
+        />
       )}
 
       {layer.type === 'vector' && (

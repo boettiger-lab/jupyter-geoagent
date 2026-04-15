@@ -230,14 +230,6 @@ export class MapViewController {
     return true;
   }
 
-  setFillColor(layerId: string, color: string): boolean {
-    const state = this.layers.get(layerId);
-    if (!state || state.type !== 'vector' || !this.map.getLayer(layerId)) return false;
-    this.map.setPaintProperty(layerId, 'fill-color', color);
-    state.fillColor = color;
-    return true;
-  }
-
   /**
    * Apply a MapLibre paint object to a layer. Spreads each key via
    * setPaintProperty so unspecified keys are left untouched. Updates
@@ -331,9 +323,7 @@ export class MapViewController {
         if (fill) this.map.removeLayer(layerId);
         if (outline) this.map.removeLayer(`${layerId}-outline`);
 
-        const fillPaint = state.fillColor
-          ? { 'fill-color': state.fillColor, 'fill-opacity': state.opacity }
-          : { 'fill-color': '#2E7D32', 'fill-opacity': state.opacity };
+        const fillPaint = state.currentStyle ?? { 'fill-color': '#2E7D32', 'fill-opacity': state.opacity };
         this.map.addLayer({
           id: layerId,
           type: 'fill',
