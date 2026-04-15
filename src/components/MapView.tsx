@@ -12,6 +12,7 @@ import maplibregl from 'maplibre-gl';
 import * as pmtiles from 'pmtiles';
 import { MapLayerConfig, LayerState, MapViewState } from '../core/types';
 import type { ColumnInfo } from 'geo-agent/app/dataset-catalog.js';
+import type { MCPClientWrapper } from '../core/mcp';
 
 const BASEMAPS: Record<string, { tiles: string[]; maxzoom: number }> = {
   natgeo: {
@@ -279,6 +280,67 @@ export class MapViewController {
     if (!state) return false;
     if (state.defaultFilter) return this.setFilter(layerId, state.defaultFilter);
     return this.clearFilter(layerId);
+  }
+
+  /**
+   * Filter a vector layer by the results of a SQL query, via MCP.
+   * Ports node_modules/geo-agent/app/map-tools.js filter_by_query.execute.
+   * The ID array stays on the client — never passes through the LLM.
+   */
+  async filterByQuery(
+    layerId: string,
+    sql: string,
+    idProperty: string,
+    mcpClient: MCPClientWrapper,
+  ): Promise<
+    | { success: true; idCount: number; message?: string }
+    | { success: false; error: string }
+  > {
+    const state = this.layers.get(layerId);
+    if (!state || state.type !== 'vector') {
+      return { success: false, error: `Layer ${layerId} is not a vector layer.` };
+    }
+
+    const col = idProperty;
+    const wrappedSql = `SELECT array_agg("${col}") FILTER (WHERE "${col}" IS NOT NULL) FROM (${sql}) _filter_subquery`;
+
+    let rawResult: string;
+    try {
+      rawResult = await mcpClient.callTool('query', { sql_query: wrappedSql });
+    } catch (err: any) {
+      return { success: false, error: `SQL execution failed: ${err.message}` };
+    }
+
+    // DuckDB returns NULL (not []) when no rows match.
+    const trimmed = rawResult.trim();
+    if (!trimmed || /\bnull\b/i.test(trimmed.replace(/.*\n/, ''))) {
+      return { success: true, idCount: 0, message: 'Query matched no features — filter not applied.' };
+    }
+
+    // Extract the JSON array from the MCP response (same heuristic as geo-agent).
+    const match = rawResult.match(/\[[\s\S]*\]/);
+    if (!match) {
+      return {
+        success: false,
+        error: `Could not parse ID list from query result. Check that id_property ("${col}") exactly matches the column name in the SQL output. Raw: ${rawResult.substring(0, 300)}`,
+      };
+    }
+    let ids: any[];
+    try {
+      ids = JSON.parse(match[0]);
+    } catch {
+      return {
+        success: false,
+        error: `Could not parse ID list from query result. Raw: ${rawResult.substring(0, 300)}`,
+      };
+    }
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return { success: true, idCount: 0, message: 'Query matched no features — filter not applied.' };
+    }
+
+    const filter: any[] = ['in', ['get', col], ['literal', ids]];
+    this.setFilter(layerId, filter);
+    return { success: true, idCount: ids.length };
   }
 
   private _retileRaster(layerId: string): boolean {
