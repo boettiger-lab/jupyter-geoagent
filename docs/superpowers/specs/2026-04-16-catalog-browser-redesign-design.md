@@ -13,29 +13,35 @@ format.
 
 ## 1. Architecture
 
-The catalog browser makes two MCP calls:
+The catalog browser uses two data sources:
 
-1. **`browse_stac_catalog`** — returns a markdown listing of collections (the
-   "collection picker"). Currently returns markdown; a structured
-   `list_collections` tool is tracked in mcp-data-server#62.
-2. **`get_collection(collection_id)`** — returns structured JSON with assets,
-   metadata, and spatial extent for a single collection (the "asset view").
+1. **STAC catalog root (HTTP fetch)** — The catalog URL (a standard STAC
+   endpoint) returns JSON with `rel=child` links listing collections. A
+   single fetch gives us `{ id, title }` pairs for the collection picker.
+   This is plain STAC — no MCP tool needed.
+2. **`get_collection(collection_id)` (MCP call)** — returns structured JSON
+   with assets, metadata, and spatial extent for a single collection (the
+   "asset view").
 
-No local STAC HTTP fetching. No `STACBrowser` class. No geo-agent
-`DatasetCatalog.processCollection()`. The MCP server is the single source of
-truth for catalog data.
+No `STACBrowser` class. No geo-agent `DatasetCatalog.processCollection()`.
+No `browse_stac_catalog` markdown parsing. The collection list comes from
+standard STAC; asset details come from MCP.
 
-MCP is **required** for the catalog browser — it is the whole point of this
+MCP is **required** for the asset view — it is the whole point of this
 extension. If no MCP connection is available, the catalog tab shows a
 connection prompt instead of an empty tree.
 
 ### Data flow
 
 ```
-┌─────────────────┐      callTool()       ┌──────────────┐
-│  CatalogBrowser │ ───────────────────▶   │  MCP server  │
-│  (React)        │ ◀─────────────────── │  (duckdb-geo) │
-└────────┬────────┘   JSON / markdown     └──────────────┘
+┌─────────────────┐      fetch()          ┌──────────────┐
+│  CatalogBrowser │ ───────────────────▶   │  STAC catalog│
+│  (React)        │ ◀─────────────────── │  (JSON)      │
+│                 │                        └──────────────┘
+│                 │      callTool()        ┌──────────────┐
+│                 │ ───────────────────▶   │  MCP server  │
+│                 │ ◀─────────────────── │  (duckdb-geo) │
+└────────┬────────┘                        └──────────────┘
          │
          │ assetToMapLayerConfig()
          ▼
@@ -56,9 +62,9 @@ single "Add" button per collection, expands groups via `expandNode()`.
 
 **After:** Two-level MCP-backed browse:
 
-- **Level 1 — Collection list.** On mount (or when MCP connects), calls
-  `browse_stac_catalog`. Parses the markdown response into
-  `{ id, title }` pairs. Renders a searchable/filterable list. Clicking a
+- **Level 1 — Collection list.** On mount, fetches the STAC catalog root
+  URL and extracts `{ id, title }` pairs from `rel=child` links in the
+  response JSON. Renders a searchable/filterable list. Clicking a
   collection opens level 2.
 - **Level 2 — Asset view.** Calls `get_collection(collection_id)`. Displays
   collection metadata (title, description, spatial/temporal extent) and lists
@@ -75,10 +81,9 @@ single "Add" button per collection, expands groups via `expandNode()`.
 
 Pure functions, no React, no geo-agent imports:
 
-- **`parseCollectionList(markdown: string): Array<{ id: string; title: string }>`**
-  — Parses `browse_stac_catalog` markdown into structured entries. This is a
-  stopgap until mcp-data-server#62 delivers a structured `list_collections`
-  tool. When that lands, this function is replaced by a direct call.
+- **`fetchCollectionList(catalogUrl: string): Promise<Array<{ id: string; title: string }>>`**
+  — Fetches the STAC catalog root URL, extracts `rel=child` links, returns
+  `{ id, title }` pairs. Pure STAC — no MCP dependency.
 
 - **`classifyAsset(asset: object): 'vector' | 'raster' | 'data' | 'other'`**
   — Classifies a STAC asset by its MIME type.
@@ -102,23 +107,27 @@ Pure functions, no React, no geo-agent imports:
 
 ---
 
-## 3. browse_stac_catalog response handling
+## 3. Collection list via STAC root
 
-The MCP tool `browse_stac_catalog` returns markdown like:
+The STAC catalog root URL (e.g.
+`https://data.source.coop/cboettig/stac/catalog.json`) returns standard
+STAC JSON with `rel=child` links:
 
+```json
+{
+  "links": [
+    { "rel": "child", "href": "./collection-id/collection.json", "title": "Collection Title" },
+    ...
+  ]
+}
 ```
-## Source STAC Catalog
 
-- **collection-id-1**: Collection Title 1
-- **collection-id-2**: Collection Title 2
-  ...
-```
-
-`parseCollectionList()` extracts `{ id, title }` pairs via simple regex on
-the `**id**: title` pattern. This is fragile by design — it's a stopgap.
-When mcp-data-server#62 delivers `list_collections` returning structured
-JSON, we replace the parse function with a direct `callTool('list_collections')`
-call and the regex goes away.
+`fetchCollectionList()` fetches this URL, filters for `rel=child` links,
+extracts the collection ID from the href (last path segment before
+`collection.json`) and the title from the link's `title` field. This is
+plain STAC — no MCP tool, no markdown parsing. The `browse_stac_catalog`
+MCP tool exists for LLM consumption (markdown); the UI reads the structured
+JSON directly.
 
 ---
 
@@ -210,9 +219,7 @@ geo-agent template app.
 
 ---
 
-## External issues filed
+## External issues
 
 - **data-workflows#115** — STAC catalog structure issue (Global Wetlands Data
   has no child links, only multiple assets directly on the collection).
-- **mcp-data-server#62** — Request for structured `list_collections` MCP tool
-  to replace markdown parsing of `browse_stac_catalog`.
