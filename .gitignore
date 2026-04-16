@@ -13,3 +13,4 @@ build/
 .yarn/
 .pnp.*
 .venv/
+docs/_build/
