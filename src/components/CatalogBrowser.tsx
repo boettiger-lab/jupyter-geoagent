@@ -328,6 +328,41 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
         {assetEntries.length === 0 && children.length === 0 && (
           <p className="jp-GeoAgent-empty">This collection has no assets or sub-collections.</p>
         )}
+
+        {/* Schema / table:columns */}
+        {(() => {
+          const columns = extractColumns(activeCollection);
+          if (columns.length === 0) return null;
+          return (
+            <div className="jp-GeoAgent-catalog-section">
+              <details>
+                <summary className="jp-GeoAgent-field-label" style={{ cursor: 'pointer' }}>
+                  <span>Schema ({columns.length} columns)</span>
+                </summary>
+                <ul className="jp-GeoAgent-schema-list">
+                  {columns.map(col => (
+                    <li key={col.name} className="jp-GeoAgent-schema-item">
+                      <div className="jp-GeoAgent-schema-header">
+                        <code className="jp-GeoAgent-schema-name">{col.name}</code>
+                        <span className="jp-GeoAgent-schema-type">{col.type}</span>
+                      </div>
+                      {col.description && (
+                        <div className="jp-GeoAgent-schema-desc">{col.description}</div>
+                      )}
+                      {col.values && col.values.length > 0 && (
+                        <div className="jp-GeoAgent-schema-values">
+                          {col.values.map(v => (
+                            <span key={v} className="jp-GeoAgent-schema-value-chip">{v}</span>
+                          ))}
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            </div>
+          );
+        })()}
       </div>
     );
   };

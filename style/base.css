@@ -246,6 +246,65 @@ h3 {
   text-align: center;
 }
 
+/* ── Schema / table:columns viewer ── */
+
+.jp-GeoAgent-schema-list {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0 0;
+}
+
+.jp-GeoAgent-schema-item {
+  padding: 5px 0;
+  border-bottom: 1px solid var(--jp-border-color2);
+}
+
+.jp-GeoAgent-schema-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.jp-GeoAgent-schema-name {
+  font-family: var(--jp-code-font-family);
+  font-size: var(--jp-code-font-size);
+  color: var(--jp-ui-font-color0);
+  background: var(--jp-layout-color2);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.jp-GeoAgent-schema-type {
+  font-size: 10px;
+  color: var(--jp-ui-font-color2);
+  font-style: italic;
+}
+
+.jp-GeoAgent-schema-desc {
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-ui-font-color2);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+.jp-GeoAgent-schema-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.jp-GeoAgent-schema-value-chip {
+  display: inline-block;
+  font-family: var(--jp-code-font-family);
+  font-size: 10px;
+  padding: 1px 5px;
+  background: var(--jp-layout-color3);
+  color: var(--jp-ui-font-color1);
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
 /* ── Layer Panel ── */
 
 .jp-GeoAgent-layers {
