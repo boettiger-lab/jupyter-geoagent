@@ -10,8 +10,7 @@
 import * as React from 'react';
 import maplibregl from 'maplibre-gl';
 import * as pmtiles from 'pmtiles';
-import { MapLayerConfig, LayerState, MapViewState } from '../core/types';
-import type { ColumnInfo } from 'geo-agent/app/dataset-catalog.js';
+import { MapLayerConfig, LayerState, MapViewState, ColumnInfo } from '../core/types';
 import type { MCPClientWrapper } from '../core/mcp';
 
 const BASEMAPS: Record<string, { tiles: string[]; maxzoom: number }> = {

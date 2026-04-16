@@ -1,28 +1,49 @@
 /**
  * Types specific to jupyter-geoagent.
  *
- * STAC, dataset, and tool types are imported from geo-agent's modules
- * (see src/typings/geo-agent.d.ts). This file defines only the types
- * that are unique to the Jupyter extension.
+ * MapLayerConfig and ColumnInfo were previously imported from geo-agent's
+ * dataset-catalog module. They are now defined locally so the extension
+ * can run without the geo-agent npm package as a runtime dependency for
+ * catalog browsing.
  */
 
-// Import geo-agent types for use in this file, then re-export
-import type {
-  DatasetEntry as _DatasetEntry,
-  MapLayerConfig as _MapLayerConfig,
-  ParquetAsset as _ParquetAsset,
-  ColumnInfo as _ColumnInfo,
-} from 'geo-agent/app/dataset-catalog.js';
+// ── Column / schema info (mirrors STAC table:columns) ──
 
-// Re-export geo-agent types so components can import from one place
-export type DatasetEntry = _DatasetEntry;
-export type MapLayerConfig = _MapLayerConfig;
-export type ParquetAsset = _ParquetAsset;
-export type ColumnInfo = _ColumnInfo;
+export interface ColumnInfo {
+  name: string;
+  type: string;
+  description: string;
+  values?: string[];
+}
 
-export type {
-  ToolResult,
-} from 'geo-agent/app/tool-registry.js';
+// ── Map layer configuration (accepted by MapViewController.addLayer) ──
+
+export interface MapLayerConfig {
+  assetId: string;
+  layerType: 'vector' | 'raster';
+  sourceType?: 'geojson';
+  title: string;
+  description: string;
+  url?: string;
+  cogUrl?: string;
+  sourceLayer?: string;
+  defaultVisible: boolean;
+  defaultFilter?: any[];
+  defaultStyle?: Record<string, any>;
+  outlineStyle?: Record<string, any>;
+  colormap?: string;
+  rescale?: string | null;
+  versions?: Array<{
+    label: string;
+    assetId: string;
+    layerType: string;
+    url?: string;
+    cogUrl?: string;
+    sourceLayer?: string;
+    sourceType?: string;
+  }>;
+  defaultVersionIndex?: number;
+}
 
 // ── Tool call recording (jupyter-geoagent specific) ──
 
