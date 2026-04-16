@@ -119,15 +119,25 @@ export const CatalogBrowser: React.FC<CatalogBrowserProps> = ({
   const handleBack = React.useCallback(() => {
     setNavStack(prev => {
       const next = prev.slice(0, -1);
-      if (next.length === 0) {
-        setActiveCollection(null);
-        setActiveError(null);
-      } else {
-        openCollection(next[next.length - 1]);
-      }
       return next;
     });
-  }, [openCollection]);
+  }, []);
+
+  // React to navStack changes: when the stack shrinks (back navigation),
+  // either clear the active view or open the parent collection.
+  const prevNavLength = React.useRef(navStack.length);
+  React.useEffect(() => {
+    const wasLonger = prevNavLength.current > navStack.length;
+    prevNavLength.current = navStack.length;
+    if (!wasLonger) return;
+
+    if (navStack.length === 0) {
+      setActiveCollection(null);
+      setActiveError(null);
+    } else {
+      openCollection(navStack[navStack.length - 1]);
+    }
+  }, [navStack, openCollection]);
 
   // ── Add an asset to the map ──
 
