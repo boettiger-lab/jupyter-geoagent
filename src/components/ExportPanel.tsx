@@ -39,6 +39,40 @@ function downloadHtml(html: string, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+function buildLayersInputConfig(
+  mapController: MapViewController,
+  catalogUrl: string,
+  titilerUrl: string,
+): LayersInputConfig {
+  const viewState = mapController.getViewState();
+  const layers = [...mapController.layers.values()];
+
+  const datasetLayers = new Map<string, string[]>();
+  for (const layer of layers) {
+    const existing = datasetLayers.get(layer.datasetId) || [];
+    existing.push(layer.id.split('/')[1]);
+    datasetLayers.set(layer.datasetId, existing);
+  }
+
+  const collections: LayersInputConfig['collections'] = [];
+  for (const [datasetId, assetIds] of datasetLayers) {
+    collections.push({
+      collection_id: datasetId,
+      assets: assetIds.map(id => ({
+        id,
+        visible: mapController.layers.get(`${datasetId}/${id}`)?.visible ?? false,
+      })),
+    });
+  }
+
+  return {
+    catalog: catalogUrl,
+    titiler_url: titilerUrl,
+    view: viewState,
+    collections,
+  };
+}
+
 export const ExportPanel: React.FC<ExportPanelProps> = ({
   mapController,
   recorder,
@@ -52,36 +86,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
 
   const exportLayersInput = React.useCallback(() => {
     if (!mapController) return;
-
-    const viewState = mapController.getViewState();
-    const layers = [...mapController.layers.values()];
-
-    // Group layers by dataset
-    const datasetLayers = new Map<string, string[]>();
-    for (const layer of layers) {
-      const existing = datasetLayers.get(layer.datasetId) || [];
-      existing.push(layer.id.split('/')[1]); // asset part
-      datasetLayers.set(layer.datasetId, existing);
-    }
-
-    const collections: LayersInputConfig['collections'] = [];
-    for (const [datasetId, assetIds] of datasetLayers) {
-      collections.push({
-        collection_id: datasetId,
-        assets: assetIds.map(id => ({
-          id,
-          visible: mapController.layers.get(`${datasetId}/${id}`)?.visible ?? false,
-        })),
-      });
-    }
-
-    const config: LayersInputConfig = {
-      catalog: catalogUrl,
-      titiler_url: titilerUrl,
-      view: viewState,
-      collections,
-    };
-
+    const config = buildLayersInputConfig(mapController, catalogUrl, titilerUrl);
     downloadJson(config, 'layers-input.json');
   }, [mapController, catalogUrl, titilerUrl]);
 
@@ -163,6 +168,32 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
     downloadHtml(html, 'map-export.html');
   }, [mapController]);
 
+  const exportStandaloneApp = React.useCallback(async () => {
+    if (!mapController) return;
+
+    const config = buildLayersInputConfig(mapController, catalogUrl, titilerUrl);
+
+    // Build index.html — geo-agent CDN template that reads layers-input.json
+    // When placed next to layers-input.json and served over HTTP, geo-agent's
+    // main.js loads the config and renders the full map with all layers.
+    const indexHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>GeoAgent Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/boettiger-lab/geo-agent@main/app/chat.css">
+</head>
+<body>
+  <script type="module" src="https://cdn.jsdelivr.net/gh/boettiger-lab/geo-agent@main/app/main.js"><\/script>
+</body>
+</html>`;
+
+    // Download both files
+    downloadJson(config, 'layers-input.json');
+    downloadHtml(indexHtml, 'index.html');
+  }, [mapController, catalogUrl, titilerUrl]);
+
   return (
     <div className="jp-GeoAgent-export">
       <h3>Export</h3>
@@ -190,6 +221,14 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
           className="jp-GeoAgent-button"
         >
           Export Tool Call Log ({recorder.length} calls)
+        </button>
+
+        <button
+          onClick={exportStandaloneApp}
+          disabled={!mapController}
+          className="jp-GeoAgent-button"
+        >
+          Export Standalone App
         </button>
       </div>
     </div>
