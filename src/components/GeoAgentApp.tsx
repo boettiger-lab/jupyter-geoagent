@@ -87,6 +87,7 @@ export const GeoAgentApp: React.FC<GeoAgentAppProps> = ({
           titilerUrl={titilerUrl}
           mapController={mapController}
           recorder={recorderRef.current}
+          mcpClient={mcpClient}
           onDatasetAdded={handleDatasetAdded}
         />
       </div>
