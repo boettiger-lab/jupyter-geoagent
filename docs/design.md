@@ -56,19 +56,18 @@ By living inside Jupyter, the extension sidesteps deployment friction (JupyterHu
 
 ### Geo-agent Module Reuse
 
-The extension imports these geo-agent modules directly (via npm dependency pointing at the GitHub repo):
+The extension uses geo-agent as a peer — sharing the same MCP server and STAC catalog, but implementing its own catalog browsing logic locally rather than re-using geo-agent's `DatasetCatalog`.
 
-| Module | Reused as-is | Adaptation needed |
-|--------|-------------|-------------------|
-| `DatasetCatalog` | Yes | None — pure data fetching, no DOM |
-| `MapManager` | Yes | Wrap in React component, provide container div |
-| `createMapTools()` | Yes | None — returns tool definitions |
-| `ToolRegistry` | Yes | Add `ToolCallRecorder` hook |
-| `MCPClient` | Yes | May route through server proxy |
-| `Agent` | No | Not needed in v1 (no LLM loop) |
-| `ChatUI` | No | Replaced by GUI panels |
+| Module | Status | Notes |
+|--------|--------|-------|
+| `MCPClient` | Used | Wrapped in `src/core/mcp.ts`; may route through server proxy |
+| `createMapTools()` | Used | Tool metadata extraction for query/filter UI |
+| `MapManager` (via `MapView.tsx`) | Used | Wrapped in React component |
+| `ToolRegistry` | Used | Plus `ToolCallRecorder` hook |
+| `DatasetCatalog` | **Not used** | Replaced by `src/core/mcp-catalog.ts` — pure functions that fetch from the STAC root and call MCP `get_collection` directly |
+| `Agent` / `ChatUI` | Not used | LLM loop delegated to jupyter-ai Claude persona |
 
-The geo-agent modules are plain ES modules (not TypeScript). They will be consumed by JupyterLab's webpack build, which handles ES modules natively. Type stubs (`.d.ts` files) will be written for the imported interfaces.
+`MapLayerConfig` and `ColumnInfo` are defined locally in `src/core/types.ts` rather than re-exported from geo-agent, so the extension can evolve its type surface independently.
 
 ## User Experience
 
@@ -268,6 +267,10 @@ A self-contained HTML file that can be opened in any browser:
 
 The standard geo-agent configuration format. A user can take this file, pair it with the [geo-agent-template](https://github.com/boettiger-lab/geo-agent-template), and deploy a full geo-agent web app with LLM chat.
 
+### Standalone App (layers-input.json + index.html)
+
+The **Export Standalone App** button downloads both files together. `index.html` loads geo-agent from the jsDelivr CDN (`cdn.jsdelivr.net/gh/boettiger-lab/geo-agent@main/app/main.js`), which reads `layers-input.json` at startup and renders the full map with all configured layers. Place both files in the same directory, serve over HTTP, and the app works without any additional setup.
+
 ### Tool Call Log (JSON)
 
 ```json
@@ -283,9 +286,20 @@ The standard geo-agent configuration format. A user can take this file, pair it 
 }
 ```
 
-## Future Work (Not in v1)
+## jupyter-ai Integration
 
-- **jupyter-ai integration** — register tools with jupyter-ai v3 so the chat panel can drive map tools. The architecture supports this: ToolRegistry has a clean tool interface that maps directly to LLM tool definitions.
+jupyter-geoagent ships with jupyter-ai v3 pre-installed. The Claude persona (powered by `claude-agent-acp`) runs Claude Code as an ACP subprocess with access to:
+
+- **duckdb-geo MCP tools** — configured in `~/.jupyter/mcp_settings.json`; provides `query`, `get_collection`, `browse_stac_catalog`, etc.
+- **Jupyter notebook tools** — 18 tools from `jupyter-server-mcp` at `localhost:3001`: read/write/execute cells, open files, run commands
+
+The chat panel lives in the JupyterLab sidebar. Users can ask natural-language questions about catalog data; the agent can write query results directly into notebooks.
+
+**Limitation:** the Claude persona cannot yet drive the GeoAgent map panel (add layers, set styles, etc.) — it has no access to `MapViewController`. Wiring that up would require exposing map tools via `jupyter-server-mcp`.
+
+## Future Work
+
+- **LLM-driven map** — expose `MapViewController` tools via `jupyter-server-mcp` so the Claude persona can add layers, set filters, and fly to locations from the chat panel.
 - **Save/Load** — custom `.geoagent` document type for saving and reopening sessions.
 - **Real-time collaboration** — yjs/CRDT integration for shared map editing (follows JupyterGIS pattern).
 - **Python API** — `GeoAgentWidget` for programmatic use in notebooks by power users.
