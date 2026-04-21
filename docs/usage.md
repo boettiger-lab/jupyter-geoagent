@@ -8,8 +8,6 @@ This guide has two parts: a **Quickstart** walkthrough of the happy path, and a 
 
 From a fresh JupyterLab session to a shareable map in about two minutes.
 
-![GeoAgent Map panel showing the STAC catalog browser, interactive map, and layer controls](images/geoagent-panel.png)
-
 ### 1. Open the GeoAgent panel
 
 In the JupyterLab launcher, click **GeoAgent Map**. A new main-area panel opens with three regions:

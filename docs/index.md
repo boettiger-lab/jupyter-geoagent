@@ -14,3 +14,5 @@ pip install jupyter-geoagent
 ```
 
 See the project [README on GitHub](https://github.com/boettiger-lab/jupyter-geoagent) for development setup.
+
+![GeoAgent Map panel showing the STAC catalog browser, interactive map, and layer controls](images/geoagent-panel.png)
