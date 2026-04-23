@@ -158,6 +158,44 @@ The frontend detects connectivity and falls back to the proxy automatically.
 
 The server extension can optionally manage a local DuckDB MCP server process for querying the user's own data. Configuration via JupyterLab settings or environment variables.
 
+## jupyter-ai Command Bridge
+
+The LLM chat panel drives the map through a short chain of pre-existing JupyterLab machinery:
+
+```
+ jupyter-ai persona (Claude / OpenCode / Goose)
+   │  (MCP tool call: execute_command)
+   ▼
+ jupyter_server_mcp  ──── discovers tools via the
+                          `jupyter_server_mcp.tools` entrypoint
+   │
+   ▼
+ jupyterlab_commands_toolkit  ── emits a `jupyterlab-command/v1` event
+   │
+   ▼
+ jupyterlab-eventlistener (browser)
+   │
+   ▼
+ app.commands.execute('geoagent:<tool>', args)
+   │
+   ▼
+ src/commands.ts handler
+   │  constructs MapManagerAdapter(controller, {onChange: refresh})
+   │  calls geo-agent's createMapTools(adapter, stubCatalog, mcpClient)
+   ▼
+ MapViewController  → map mutations  + ToolCallRecorder entry
+```
+
+Key pieces:
+
+- **`src/commands.ts`** — at plugin activation, loops over `createMapTools()` output and registers one JupyterLab command (`geoagent:<tool_name>`) per tool, setting `describedBy.args` to the tool's `inputSchema`. `list_all_commands` exposes that schema to the LLM.
+- **`src/core/active-panel.ts`** — module-scoped ref `{controller, mcpClient, recorder, refresh}` that `GeoAgentApp` updates on mount and clears on unmount. Multi-panel UX is last-mounted-wins (ArcGIS "active frame" idiom).
+- **`src/core/map-manager-adapter.ts`** — `MapManagerAdapter` wraps `MapViewController` with the `MapManager` surface geo-agent expects (`{success, ...}` return shapes, `getLayerSummaries`, `syncCheckbox`). Every mutation fires `options.onChange`, which bumps the React `layerRefreshKey` so the *Layers* panel re-renders in response to LLM-driven changes.
+
+What this enables: zero prompt-engineering per app. Any jupyter-ai persona with MCP access sees the commands via `list_all_commands` and can drive the map directly. Tools added upstream in `boettiger-lab/geo-agent` appear automatically after a `jlpm install` + rebuild — no per-command wiring in jupyter-geoagent.
+
+Tools currently skipped (in `SKIP_TOOLS`): `list_datasets` and `get_schema` (require geo-agent's sync `DatasetCatalog`; jupyter-geoagent uses an MCP-backed catalog instead), and `set_projection` (no globe/mercator toggle in `MapViewController` yet).
+
 ## Server Extension
 
 Lightweight Python package (`jupyter_geoagent`) registered as a Jupyter server extension:
