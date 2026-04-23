@@ -36,6 +36,6 @@ declare module 'geo-agent/app/map-tools.js' {
     name: string;
     description: string;
     inputSchema: any;
-    execute: (args: Record<string, any>) => any;
+    execute: (args: Record<string, any>) => any | Promise<any>;
   }>;
 }

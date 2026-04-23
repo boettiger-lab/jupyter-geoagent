@@ -143,9 +143,11 @@ To go from your exploration to a full geo-agent web app (with LLM chat) in one s
 
 Alternatively, use **Export layers-input.json** alone and drop it into a [`geo-agent-template`](https://github.com/boettiger-lab/geo-agent-template) clone.
 
-### Use the AI chat panel (jupyter-ai)
+### Drive the map with the AI chat (jupyter-ai)
 
-jupyter-geoagent ships with jupyter-ai v3 and a pre-configured Claude persona that has access to the duckdb-geo MCP server. This lets you ask questions about catalog data and get answers written directly into notebooks, without leaving JupyterLab.
+jupyter-geoagent exposes every map tool as a JupyterLab command, so any jupyter-ai persona (Claude, OpenCode, Goose, …) can drive the map from the chat panel: show and hide layers, apply filters, restyle, fly to regions, and run SQL-driven filters through the DuckDB MCP server. The persona discovers the commands dynamically — no per-app prompt engineering required.
+
+**How it works, in one sentence.** jupyter-ai personas call the MCP tools `list_all_commands` / `execute_command` (from `jupyter_server_mcp` + `jupyterlab_commands_toolkit`), jupyter-geoagent registers each map tool as a command named `geoagent:<tool_name>` with a JSON-Schema `args` spec, and the LLM invokes them by name.
 
 **Setup (one time):**
 
@@ -158,15 +160,78 @@ jupyter-geoagent ships with jupyter-ai v3 and a pre-configured Claude persona th
      ]
    }
    ```
-2. Install the Claude ACP adapter: `npm install -g @zed-industries/claude-agent-acp --prefix ~/.local`
-3. Restart JupyterLab
+2. Install at least one ACP-based persona. Any of these works:
+   - **Claude:** `npm install -g @zed-industries/claude-agent-acp --prefix ~/.local`
+   - **OpenCode:** `curl -fsSL https://opencode.ai/install | bash`
+   - **Goose:** see [block.github.io/goose](https://block.github.io/goose/)
+3. Restart JupyterLab.
 
-**To chat:**
+**To start a chat:**
 
-1. Click the chat bubble icon in the JupyterLab left sidebar
-2. Click **+** to open a new chat
-3. Select the **Claude** persona
-4. Ask questions — the agent has access to duckdb-geo tools (`query`, `get_collection`, etc.) and can read/write notebooks
+1. Open a **GeoAgent Map** panel from the launcher (keep it open — the LLM operates on whichever panel is currently mounted).
+2. Click the chat bubble icon in the JupyterLab left sidebar.
+3. Click **+** for a new chat.
+4. Pick a persona (`@Claude`, `@OpenCode`, `@Goose`).
+
+#### Example 1: See what's available
+
+Prompt:
+
+> `@Claude use list_all_commands with query="geoagent:" and show the list with args schemas.`
+
+The response lists the registered commands, each with its argument schema:
+
+| Command ID | Args |
+|---|---|
+| `geoagent:show_layer` | `layer_id: string` |
+| `geoagent:hide_layer` | `layer_id: string` |
+| `geoagent:set_filter` | `layer_id: string`, `filter: array` |
+| `geoagent:clear_filter` | `layer_id: string` |
+| `geoagent:reset_filter` | `layer_id: string` |
+| `geoagent:set_style` | `layer_id: string`, `style: object` |
+| `geoagent:reset_style` | `layer_id: string` |
+| `geoagent:get_map_state` | *(none)* |
+| `geoagent:fly_to` | `center: [lon, lat]`, `zoom?: number` |
+| `geoagent:filter_by_query` | `layer_id: string`, `sql: string`, `id_property: string` |
+
+#### Example 2: Show, hide, and inspect a layer
+
+After adding a layer to the map from the catalog browser:
+
+> `@Claude call execute_command("geoagent:get_map_state", {}) and summarize the layers.`
+
+The LLM reports the current view (center, zoom) and per-layer state (`visible`, `opacity`, `filter`, `type`).
+
+> `@Claude hide the CAL FIRE layer, then show it again. Confirm the visible state at each step.`
+
+The map visually hides and re-shows the layer; the *Layers* tab checkbox updates automatically.
+
+#### Example 3: Filter by SQL
+
+The most powerful integration — the LLM writes a SQL query against the dataset's parquet, jupyter-geoagent aggregates matching IDs into a MapLibre `in` filter, and the map updates. IDs never pass through the LLM's context.
+
+> `@Claude the active layer is CAL FIRE prescribed burns. Use geoagent:filter_by_query to filter to rows where AGENCY = 'NPS'. CNG-processed datasets use "_cng_fid" as the id_property.`
+
+The LLM calls `get_stac_details` to look up the parquet path, writes a query like `SELECT _cng_fid FROM read_parquet('s3://...') WHERE AGENCY = 'NPS'`, then invokes `geoagent:filter_by_query` — the map filters to National Park Service burns only, and the LLM reports `idCount` (how many features matched) and `featuresInView` (how many are currently visible).
+
+#### Example 4: Restyle a layer
+
+> `@Claude color the burns by ASSISTUNIT using a match expression: USFS orange, NPS green, BLM brown, anything else grey.`
+
+The LLM builds a MapLibre data-driven paint expression and calls `geoagent:set_style` — the map recolors in place.
+
+#### Example 5: Guide the view
+
+> `@Claude fly to Yosemite Valley at zoom 12.`
+
+The LLM calls `geoagent:fly_to` with the correct lat/lon. Handy for setting up a specific framing before exporting the standalone app.
+
+#### Tips and gotchas
+
+- **Keep a panel open.** Commands target whichever GeoAgent Map panel was most recently mounted. If no panel is open, the LLM gets back *"No GeoAgent Map panel is open."*
+- **The LLM sees layer IDs, not display names.** If it picks the wrong layer, mention the `displayName` in your prompt — the tool descriptions already include a mapping from ID to displayName.
+- **LLM-driven actions are captured in the tool-call log.** Switch to the *Export* tab → **Export Tool Call Log** to get a JSON record alongside any GUI actions in the same session.
+- **`filter_by_query` requires an MCP connection.** Switch to the *Query* tab and click **Connect** first if the LLM reports *"filter_by_query requires an MCP connection."*
 
 ### Reproduce a session
 

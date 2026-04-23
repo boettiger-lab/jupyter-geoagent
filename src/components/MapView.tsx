@@ -298,7 +298,7 @@ export class MapViewController {
     idProperty: string,
     mcpClient: MCPClientWrapper,
   ): Promise<
-    | { success: true; idCount: number; message?: string }
+    | { success: true; idCount: number; featuresInView?: number; message?: string }
     | { success: false; error: string }
   > {
     const state = this.layers.get(layerId);
@@ -307,7 +307,7 @@ export class MapViewController {
     }
 
     const col = idProperty;
-    const wrappedSql = `SELECT array_agg("${col}") FILTER (WHERE "${col}" IS NOT NULL) FROM (${sql}) _filter_subquery`;
+    const wrappedSql = `SELECT to_json(array_agg("${col}") FILTER (WHERE "${col}" IS NOT NULL)) AS ids FROM (${sql}) _filter_subquery`;
 
     let rawResult: string;
     try {
@@ -340,12 +340,13 @@ export class MapViewController {
       };
     }
     if (!Array.isArray(ids) || ids.length === 0) {
-      return { success: true, idCount: 0, message: 'Query matched no features — filter not applied.' };
+      return { success: true, idCount: 0, featuresInView: 0, message: 'Query matched no features — filter not applied.' };
     }
 
     const filter: any[] = ['in', ['get', col], ['literal', ids]];
     this.setFilter(layerId, filter);
-    return { success: true, idCount: ids.length };
+    const featuresInView = this.map.queryRenderedFeatures({ layers: [layerId] }).length;
+    return { success: true, idCount: ids.length, featuresInView };
   }
 
   private _retileRaster(layerId: string): boolean {

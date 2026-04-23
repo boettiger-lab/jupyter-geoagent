@@ -31,6 +31,12 @@ export function getToolMetadata(
       [...controller.layers.entries()]
         .filter(([, s]) => s.type === 'vector')
         .map(([id]) => id),
+    getLayerSummaries: () =>
+      [...controller.layers.entries()].map(([id, state]) => ({
+        id,
+        displayName: state.displayName,
+        type: state.type,
+      })),
   };
   const catalogStub = { getAll: () => [], get: () => null, getIds: () => [] };
   // Pass a truthy stub so filter_by_query metadata is included.

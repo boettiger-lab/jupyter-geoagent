@@ -14,6 +14,7 @@ import { QueryPanel } from './QueryPanel';
 import { ExportPanel } from './ExportPanel';
 import { ToolCallRecorder } from '../core/tools';
 import { MCPClientWrapper } from '../core/mcp';
+import { setActivePanel } from '../core/active-panel';
 
 export interface GeoAgentAppProps {
   serverSettings: ServerConnection.ISettings;
@@ -57,6 +58,22 @@ export const GeoAgentApp: React.FC<GeoAgentAppProps> = ({
       .then(() => setMcpClient(client))
       .catch(e => console.warn('[GeoAgent] MCP connection failed:', e.message));
   }, [mcpServerUrl, mcpHeaders, useProxy, serverSettings]);
+
+  // Publish this panel as the active target for LLM-driven commands.
+  // Cleared on unmount so stale controllers don't get poked by the next
+  // opened panel.
+  React.useEffect(() => {
+    if (!mapController) return;
+    setActivePanel({
+      controller: mapController,
+      mcpClient,
+      recorder: recorderRef.current,
+      refresh: () => setLayerRefreshKey(k => k + 1),
+    });
+    return () => {
+      setActivePanel(null);
+    };
+  }, [mapController, mcpClient]);
 
   const handleDatasetAdded = React.useCallback((_datasetId: string, firstLayerId?: string) => {
     setLayerRefreshKey(k => k + 1);
