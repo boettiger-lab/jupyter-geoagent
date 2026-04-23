@@ -57,6 +57,11 @@ export function registerGeoAgentCommands(app: JupyterFrontEnd): void {
         const tools = createMapTools(adapter as any, stubCatalog as any, panel.mcpClient ?? undefined);
         const tool = tools.find(t => t.name === meta.name);
         if (!tool) {
+          // map-tools.js only includes filter_by_query when mcpClient is truthy,
+          // so a missing tool here usually means the panel has no MCP connection.
+          if (meta.name === 'filter_by_query' && !panel.mcpClient) {
+            return JSON.stringify({ success: false, error: 'filter_by_query requires an MCP connection. Connect to the MCP server in the Query tab first.' });
+          }
           return JSON.stringify({ success: false, error: `Tool '${meta.name}' not found in createMapTools output.` });
         }
 
