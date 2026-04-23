@@ -80,7 +80,7 @@ export class MapManagerAdapter {
       featuresInView: features.length,
     };
     if (filter && features.length === 0) {
-      result.warning = 'No features match this filter in the current view. Filter may be too restrictive or property values may not match. Use filter_by_query to verify via SQL.';
+      result.warning = 'No features match this filter in the current view. Filter may be too restrictive or property values may not match; if the layer was just added or the map was just flown to a new region, tiles may not have loaded yet — wait a moment and re-check. Use filter_by_query to verify via SQL.';
     }
     return result;
   }
@@ -111,7 +111,14 @@ export class MapManagerAdapter {
       }
     }
     this.options.onChange?.();
-    return { success: true, layer: layerId, displayName: state.displayName, updates };
+    const anySucceeded = updates.length === 0 || updates.some(u => u.success);
+    return {
+      success: anySucceeded,
+      layer: layerId,
+      displayName: state.displayName,
+      updates,
+      ...(anySucceeded ? {} : { error: 'All style properties failed to apply; see updates[].error' }),
+    };
   }
 
   resetStyle(layerId: string) {
@@ -125,6 +132,7 @@ export class MapManagerAdapter {
   // --- view ---
 
   flyTo({ center, zoom }: { center: [number, number]; zoom?: number }) {
+    // No onChange: camera motion doesn't affect Layer/Style panel state.
     this.controller.flyTo(center, zoom);
     return { success: true, center, zoom: zoom ?? this.controller.map.getZoom() };
   }
@@ -144,7 +152,11 @@ export class MapManagerAdapter {
     return { success: true, view, layers };
   }
 
-  // --- no-op on our side; geo-agent's tool code calls this to sync a legacy DOM checkbox ---
+  // geo-agent's tool code calls this after show/hide to update a legacy DOM
+  // checkbox. In jupyter-geoagent the React Layers panel re-renders on
+  // onChange, so this is the bridge that keeps it in sync. Note that
+  // showLayer/hideLayer already fire onChange themselves; the duplicate
+  // call here is idempotent (React batches re-renders).
   syncCheckbox(_layerId: string): void {
     this.options.onChange?.();
   }
