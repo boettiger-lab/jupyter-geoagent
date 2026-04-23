@@ -15,6 +15,7 @@ import { ILauncher } from '@jupyterlab/launcher';
 import { WidgetTracker } from '@jupyterlab/apputils';
 import { LabIcon } from '@jupyterlab/ui-components';
 import { GeoAgentPanel } from './panel';
+import { registerGeoAgentCommands } from './commands';
 import geoagentIconSvg from '../style/geoagent-icon.svg';
 
 const geoagentIcon = new LabIcon({
@@ -45,6 +46,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     restorer: ILayoutRestorer | null,
   ) => {
     console.log('jupyter-geoagent extension activated');
+    registerGeoAgentCommands(app);
 
     const tracker = new WidgetTracker<GeoAgentPanel>({ namespace: 'geoagent' });
 
