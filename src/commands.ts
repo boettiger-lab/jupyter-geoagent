@@ -20,7 +20,7 @@ import { getActivePanel } from './core/active-panel';
 /** Skip tools that depend on machinery jupyter-geoagent doesn't provide yet. */
 const SKIP_TOOLS = new Set([
   'list_datasets',          // needs DatasetCatalog; jupyter-geoagent uses MCP-backed catalog
-  'get_dataset_details',    // same
+  'get_schema',             // same — delegates to catalog.get(dataset_id)
   'set_projection',         // MapViewController doesn't implement globe/mercator toggle
 ]);
 
@@ -33,7 +33,11 @@ export function registerGeoAgentCommands(app: JupyterFrontEnd): void {
   // Build the tool list once using stubs — we only use each entry's name,
   // description, and inputSchema here. Real mapManager/catalog/mcpClient are
   // resolved inside each execute handler from getActivePanel().
-  const stubManager = { getLayerIds: () => [], getVectorLayerIds: () => [] };
+  const stubManager = {
+    getLayerIds: () => [],
+    getVectorLayerIds: () => [],
+    getLayerSummaries: () => [],
+  };
   const stubCatalog = { getAll: () => [], get: () => null, getIds: () => [] };
   const stubMcp = {};
   const toolMetadata = createMapTools(stubManager as any, stubCatalog as any, stubMcp as any);
@@ -52,36 +56,18 @@ export function registerGeoAgentCommands(app: JupyterFrontEnd): void {
         if (!panel) return NO_PANEL_ERROR;
         const argsObj = (args ?? {}) as Record<string, any>;
 
-        // Route filter_by_query through our local implementation, which wraps
-        // array_agg in to_json() so DuckDB's MCP output is JSON-parseable.
-        // Upstream geo-agent has the same bug (uses bare array_agg); remove
-        // this branch once the upstream fix ships.
-        if (meta.name === 'filter_by_query') {
-          if (!panel.mcpClient) {
-            return recordAndReturn(panel, meta.name, argsObj,
-              { success: false, error: 'filter_by_query requires an MCP connection. Connect to the MCP server in the Query tab first.' });
-          }
-          try {
-            const result = await panel.controller.filterByQuery(
-              argsObj.layer_id,
-              argsObj.sql,
-              argsObj.id_property,
-              panel.mcpClient,
-            );
-            panel.refresh();
-            return recordAndReturn(panel, meta.name, argsObj, result);
-          } catch (err: any) {
-            return recordAndReturn(panel, meta.name, argsObj,
-              { success: false, error: err?.message ?? String(err) });
-          }
-        }
-
         const adapter = new MapManagerAdapter(panel.controller, { onChange: panel.refresh });
         // Rebuild the tool with the real adapter + mcpClient so closures bind
         // to the current panel's state.
         const tools = createMapTools(adapter as any, stubCatalog as any, panel.mcpClient ?? undefined);
         const tool = tools.find(t => t.name === meta.name);
         if (!tool) {
+          // map-tools.js only includes filter_by_query when mcpClient is truthy,
+          // so a missing tool here usually means the panel has no MCP connection.
+          if (meta.name === 'filter_by_query' && !panel.mcpClient) {
+            return recordAndReturn(panel, meta.name, argsObj,
+              { success: false, error: 'filter_by_query requires an MCP connection. Connect to the MCP server in the Query tab first.' });
+          }
           return recordAndReturn(panel, meta.name, argsObj,
             { success: false, error: `Tool '${meta.name}' not found in createMapTools output.` });
         }

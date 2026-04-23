@@ -35,6 +35,15 @@ export class MapManagerAdapter {
       .map(([id]) => id);
   }
 
+  /** Upstream geo-agent tools call this instead of getLayerIds/getVectorLayerIds. */
+  getLayerSummaries(): Array<{ id: string; displayName: string; type: 'vector' | 'raster' }> {
+    return [...this.controller.layers.entries()].map(([id, state]) => ({
+      id,
+      displayName: state.displayName,
+      type: state.type,
+    }));
+  }
+
   // --- show / hide ---
 
   showLayer(layerId: string) {

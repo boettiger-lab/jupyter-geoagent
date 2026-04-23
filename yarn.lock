@@ -2164,8 +2164,8 @@ __metadata:
 
 "geo-agent@git+https://github.com/boettiger-lab/geo-agent.git":
   version: 1.0.0
-  resolution: "geo-agent@https://github.com/boettiger-lab/geo-agent.git#commit=6f492038781fb4ecd583f4dd30cd672cabbff106"
-  checksum: 27b60c7e7146abebfa05700f164f0a9f1a41c2fadd1164d9bb214ae2b862725dc796cbb428b1be5a9a6c87e1fcee24a7701059c68c48f2f3f719f18664dd7e11
+  resolution: "geo-agent@https://github.com/boettiger-lab/geo-agent.git#commit=bd724a52c7e42d95de713c0d063d84ecd7074003"
+  checksum: bade973c6243ef99cc80ad6b297927427ffa45c92948e3742c25393464de3f83f9c7faba5607c1e2a0d5b3223ad843e834d1d47e2e60365194f839448529fcdb
   languageName: node
   linkType: hard
 
