@@ -50,6 +50,31 @@ export function registerGeoAgentCommands(app: JupyterFrontEnd): void {
       execute: async (args) => {
         const panel = getActivePanel();
         if (!panel) return NO_PANEL_ERROR;
+        const argsObj = (args ?? {}) as Record<string, any>;
+
+        // Route filter_by_query through our local implementation, which wraps
+        // array_agg in to_json() so DuckDB's MCP output is JSON-parseable.
+        // Upstream geo-agent has the same bug (uses bare array_agg); remove
+        // this branch once the upstream fix ships.
+        if (meta.name === 'filter_by_query') {
+          if (!panel.mcpClient) {
+            return recordAndReturn(panel, meta.name, argsObj,
+              { success: false, error: 'filter_by_query requires an MCP connection. Connect to the MCP server in the Query tab first.' });
+          }
+          try {
+            const result = await panel.controller.filterByQuery(
+              argsObj.layer_id,
+              argsObj.sql,
+              argsObj.id_property,
+              panel.mcpClient,
+            );
+            panel.refresh();
+            return recordAndReturn(panel, meta.name, argsObj, result);
+          } catch (err: any) {
+            return recordAndReturn(panel, meta.name, argsObj,
+              { success: false, error: err?.message ?? String(err) });
+          }
+        }
 
         const adapter = new MapManagerAdapter(panel.controller, { onChange: panel.refresh });
         // Rebuild the tool with the real adapter + mcpClient so closures bind
@@ -57,24 +82,18 @@ export function registerGeoAgentCommands(app: JupyterFrontEnd): void {
         const tools = createMapTools(adapter as any, stubCatalog as any, panel.mcpClient ?? undefined);
         const tool = tools.find(t => t.name === meta.name);
         if (!tool) {
-          // map-tools.js only includes filter_by_query when mcpClient is truthy,
-          // so a missing tool here usually means the panel has no MCP connection.
-          if (meta.name === 'filter_by_query' && !panel.mcpClient) {
-            return JSON.stringify({ success: false, error: 'filter_by_query requires an MCP connection. Connect to the MCP server in the Query tab first.' });
-          }
-          return JSON.stringify({ success: false, error: `Tool '${meta.name}' not found in createMapTools output.` });
+          return recordAndReturn(panel, meta.name, argsObj,
+            { success: false, error: `Tool '${meta.name}' not found in createMapTools output.` });
         }
 
-        const argsObj = (args ?? {}) as Record<string, any>;
         try {
           const result = await Promise.resolve(tool.execute(argsObj));
           const resultStr = typeof result === 'string' ? result : JSON.stringify(result);
           panel.recorder.record(meta.name, argsObj, resultStr);
           return resultStr;
         } catch (err: any) {
-          const errResult = JSON.stringify({ success: false, error: err?.message ?? String(err) });
-          panel.recorder.record(meta.name, argsObj, errResult);
-          return errResult;
+          return recordAndReturn(panel, meta.name, argsObj,
+            { success: false, error: err?.message ?? String(err) });
         }
       },
     });
@@ -84,4 +103,15 @@ export function registerGeoAgentCommands(app: JupyterFrontEnd): void {
 function firstLine(s: string): string {
   const idx = s.indexOf('\n');
   return idx === -1 ? s : s.slice(0, idx);
+}
+
+function recordAndReturn(
+  panel: NonNullable<ReturnType<typeof getActivePanel>>,
+  toolName: string,
+  args: Record<string, any>,
+  result: unknown,
+): string {
+  const resultStr = typeof result === 'string' ? result : JSON.stringify(result);
+  panel.recorder.record(toolName, args, resultStr);
+  return resultStr;
 }
