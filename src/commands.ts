@@ -50,6 +50,11 @@ export function registerGeoAgentCommands(app: JupyterFrontEnd): void {
     app.commands.addCommand(commandId, {
       label: `GeoAgent: ${meta.name}`,
       caption: firstLine(meta.description),
+      // `usage` is what jupyterlab_commands_toolkit surfaces as `description`
+      // in list_all_commands output, so the LLM sees the full tool description
+      // (including nudges like "IMPORTANT: check featuresInView" and available
+      // layer lists), not just the one-line caption.
+      usage: meta.description,
       describedBy: { args: meta.inputSchema },
       execute: async (args) => {
         const panel = getActivePanel();
