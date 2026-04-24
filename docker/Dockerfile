@@ -8,10 +8,13 @@ FROM quay.io/jupyter/minimal-notebook:latest
 
 USER root
 
-# Node.js + npm are required for the @zed-industries/claude-agent-acp
-# bridge that jupyter-ai spawns when the user @mentions @Claude.
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends nodejs npm && \
+# Node.js (with bundled npm) is required for the
+# @zed-industries/claude-agent-acp bridge that jupyter-ai spawns when
+# the user @mentions @Claude. Ubuntu 24.04's apt ships Node 18, but the
+# ACP bridge uses ESM import attributes (`with { type: "json" }`) which
+# require Node >= 20. Pull Node 22 LTS from NodeSource instead.
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
