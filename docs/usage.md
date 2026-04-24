@@ -183,6 +183,7 @@ The response lists the registered commands, each with its argument schema:
 
 | Command ID | Args |
 |---|---|
+| `geoagent:add_layer` | `collection_id: string`, `asset_id: string`, plus optional `title`, `source_layer`, `default_style`, `outline_style`, `default_filter` |
 | `geoagent:show_layer` | `layer_id: string` |
 | `geoagent:hide_layer` | `layer_id: string` |
 | `geoagent:set_filter` | `layer_id: string`, `filter: array` |
@@ -194,9 +195,29 @@ The response lists the registered commands, each with its argument schema:
 | `geoagent:fly_to` | `center: [lon, lat]`, `zoom?: number` |
 | `geoagent:filter_by_query` | `layer_id: string`, `sql: string`, `id_property: string` |
 
-#### Example 2: Show, hide, and inspect a layer
+#### Example 2: Add a new layer from the catalog in one call
 
-After adding a layer to the map from the catalog browser:
+The `add_layer` command accepts the same fields as a `layers-input.json` entry, so the LLM can compose a fully-styled, filtered layer in a single call — no GUI clicking required.
+
+> `@Claude add CalFire wildfires to the map, color them orange with red outlines, and filter to 2018 only.`
+
+The persona calls `browse_stac_catalog` / `get_collection` (MCP) to find the right collection + asset IDs, then:
+
+```json
+execute_command("geoagent:add_layer", {
+  "collection_id": "calfire-2024-firep",
+  "asset_id": "firep-pmtiles",
+  "default_style":  { "fill-color": "orange", "fill-opacity": 0.6 },
+  "outline_style":  { "line-color": "red",   "line-width": 1.5 },
+  "default_filter": ["==", ["get", "YEAR_"], 2018]
+})
+```
+
+Omitting the optional fields (`default_style`, `outline_style`, `default_filter`, `title`, `source_layer`) falls back to STAC defaults — you can also ask the persona for a plain *"add CalFire wildfires"* and style it in follow-up `geoagent:set_filter` / `geoagent:set_style` calls.
+
+#### Example 3: Show, hide, and inspect a layer
+
+After adding a layer to the map (from the catalog browser or `add_layer`):
 
 > `@Claude call execute_command("geoagent:get_map_state", {}) and summarize the layers.`
 
@@ -206,7 +227,7 @@ The LLM reports the current view (center, zoom) and per-layer state (`visible`, 
 
 The map visually hides and re-shows the layer; the *Layers* tab checkbox updates automatically.
 
-#### Example 3: Filter by SQL
+#### Example 4: Filter by SQL
 
 The most powerful integration — the LLM writes a SQL query against the dataset's parquet, jupyter-geoagent aggregates matching IDs into a MapLibre `in` filter, and the map updates. IDs never pass through the LLM's context.
 
@@ -214,13 +235,13 @@ The most powerful integration — the LLM writes a SQL query against the dataset
 
 The LLM calls `get_stac_details` to look up the parquet path, writes a query like `SELECT _cng_fid FROM read_parquet('s3://...') WHERE AGENCY = 'NPS'`, then invokes `geoagent:filter_by_query` — the map filters to National Park Service burns only, and the LLM reports `idCount` (how many features matched) and `featuresInView` (how many are currently visible).
 
-#### Example 4: Restyle a layer
+#### Example 5: Restyle a layer
 
 > `@Claude color the burns by ASSISTUNIT using a match expression: USFS orange, NPS green, BLM brown, anything else grey.`
 
 The LLM builds a MapLibre data-driven paint expression and calls `geoagent:set_style` — the map recolors in place.
 
-#### Example 5: Guide the view
+#### Example 6: Guide the view
 
 > `@Claude fly to Yosemite Valley at zoom 12.`
 
