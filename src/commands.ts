@@ -107,25 +107,37 @@ export function registerGeoAgentCommands(app: JupyterFrontEnd): void {
 function registerAddLayerCommand(app: JupyterFrontEnd): void {
   app.commands.addCommand('geoagent:add_layer', {
     label: 'GeoAgent: add_layer',
-    caption: 'Add a STAC asset (PMTiles or COG) to the map as a live interactive layer.',
+    caption: 'Add a STAC asset (PMTiles or COG) to the map as a live interactive layer, optionally with a default style/filter.',
     usage: `Add a STAC asset from the configured catalog as a live interactive map layer (PMTiles vector or COG raster). This is the correct way to bring a dataset onto the map when the user asks you to "add X" or "show X" — do NOT write config files, export GeoJSON, or otherwise materialize the data client-side.
 
 Workflow:
 1. Use browse_stac_catalog (MCP) to find a collection_id.
 2. Use get_collection (MCP) to see which assets are available — PMTiles assets typically have href ending in .pmtiles, COG raster assets have href ending in .tif / .tiff.
-3. Call this command with the collection_id and asset_id. The command returns the layer_id you can use in subsequent set_filter / set_style / filter_by_query / show_layer / hide_layer calls.
+3. Call this command with the collection_id and asset_id, plus any of the optional style/filter overrides. The command returns the layer_id you can use in subsequent set_filter / set_style / filter_by_query / show_layer / hide_layer calls.
 
 After adding, the map flies to the collection's extent and the layer is visible.
 
-Parameters:
+Required parameters:
 - collection_id: the STAC collection ID (e.g., 'fire-perimeters')
-- asset_id: the visual asset key inside the collection (e.g., 'firep-pmtiles')`,
+- asset_id: the visual asset key inside the collection (e.g., 'firep-pmtiles')
+
+Optional parameters (mirror the layers-input.json schema so you can compose a full styled layer in a single call):
+- title: display name for the Layers panel (defaults to the STAC asset title)
+- source_layer: PMTiles source-layer name (defaults to the asset's first 'vector:layers' entry, falling back to collection_id)
+- default_style: MapLibre paint properties for the fill/raster layer, e.g. {"fill-color": "#FF6B35", "fill-opacity": 0.5}
+- outline_style: MapLibre paint properties for the polygon outline line, e.g. {"line-color": "#D32F2F", "line-width": 1}. Only meaningful for vector polygon layers; ignored otherwise.
+- default_filter: MapLibre filter expression applied on load, e.g. [">=", ["get", "YEAR_"], 2000]. Use the modern expression form ["==", ["get", "PROP"], VAL], not legacy ["==", "PROP", VAL].`,
     describedBy: {
       args: {
         type: 'object',
         properties: {
           collection_id: { type: 'string', description: 'STAC collection ID' },
           asset_id: { type: 'string', description: 'Visual asset key (PMTiles vector or COG raster)' },
+          title: { type: 'string', description: 'Display name shown in the Layers panel (defaults to the asset title)' },
+          source_layer: { type: 'string', description: 'PMTiles source-layer name; defaults to the asset\'s first vector:layers entry' },
+          default_style: { type: 'object', description: 'MapLibre paint properties for the fill/raster layer' },
+          outline_style: { type: 'object', description: 'MapLibre paint properties for the polygon outline line layer (vector polygons only)' },
+          default_filter: { type: 'array', description: 'MapLibre filter expression applied on load' },
         },
         required: ['collection_id', 'asset_id'],
       },
@@ -172,6 +184,15 @@ Parameters:
         return recordAndReturn(panel, 'add_layer', argsObj,
           { success: false, error: `Asset '${assetId}' is not a visual type. add_layer only supports PMTiles (vector) or COG (raster) assets.` });
       }
+
+      // Merge LLM-supplied overrides into the config before addLayer.
+      // Matches the layers-input.json schema so the LLM can compose a
+      // fully-styled layer in one call.
+      if (typeof argsObj.title === 'string') config.title = argsObj.title;
+      if (typeof argsObj.source_layer === 'string') config.sourceLayer = argsObj.source_layer;
+      if (argsObj.default_style && typeof argsObj.default_style === 'object') config.defaultStyle = argsObj.default_style;
+      if (argsObj.outline_style && typeof argsObj.outline_style === 'object') config.outlineStyle = argsObj.outline_style;
+      if (Array.isArray(argsObj.default_filter)) config.defaultFilter = argsObj.default_filter;
 
       const columns = extractColumns(parsed);
       const layerId = panel.controller.addLayer(collectionId, config, columns);
