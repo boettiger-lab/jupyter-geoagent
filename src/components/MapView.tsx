@@ -97,17 +97,27 @@ export class MapViewController {
       this.map.addLayer(layerDef);
 
       const outlineId = `${layerId}-outline`;
+      const outlinePaint: Record<string, any> = config.outlineStyle
+        ? { ...config.outlineStyle }
+        : { 'line-color': '#333', 'line-width': 0.5, 'line-opacity': 0.5 };
       const outlineDef: maplibregl.LayerSpecification = {
         id: outlineId,
         type: 'line',
         source: sourceId,
-        paint: { 'line-color': '#333', 'line-width': 0.5, 'line-opacity': 0.5 },
+        paint: outlinePaint as any,
         layout: { visibility: config.defaultVisible ? 'visible' : 'none' },
       };
       if (config.sourceLayer && config.sourceType !== 'geojson') {
         (outlineDef as any)['source-layer'] = config.sourceLayer;
       }
       this.map.addLayer(outlineDef);
+
+      // Apply defaultFilter at add time — otherwise it's only stored in
+      // LayerState and the rendered tiles show unfiltered features.
+      if (config.defaultFilter) {
+        this.map.setFilter(layerId, config.defaultFilter as any);
+        this.map.setFilter(outlineId, config.defaultFilter as any);
+      }
 
     } else if (config.layerType === 'raster') {
       let tilesUrl = `${this.titilerUrl}/cog/tiles/WebMercatorQuad/{z}/{x}/{y}.png?url=${encodeURIComponent(config.cogUrl!)}`;

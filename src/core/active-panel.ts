@@ -18,6 +18,10 @@ export interface ActivePanel {
   recorder: ToolCallRecorder;
   /** Called after any tool mutation so React panels re-render. */
   refresh: () => void;
+  /** HTTPS origin used to resolve `s3://` hrefs when adding STAC assets. */
+  s3Endpoint: string;
+  /** TiTiler base URL for COG raster tile URLs. */
+  titilerUrl: string;
 }
 
 let current: ActivePanel | null = null;

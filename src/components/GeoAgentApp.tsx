@@ -15,6 +15,7 @@ import { ExportPanel } from './ExportPanel';
 import { ToolCallRecorder } from '../core/tools';
 import { MCPClientWrapper } from '../core/mcp';
 import { setActivePanel } from '../core/active-panel';
+import { deriveS3Endpoint } from '../core/mcp-catalog';
 
 export interface GeoAgentAppProps {
   serverSettings: ServerConnection.ISettings;
@@ -69,11 +70,13 @@ export const GeoAgentApp: React.FC<GeoAgentAppProps> = ({
       mcpClient,
       recorder: recorderRef.current,
       refresh: () => setLayerRefreshKey(k => k + 1),
+      s3Endpoint: deriveS3Endpoint(defaultCatalogUrl),
+      titilerUrl,
     });
     return () => {
       setActivePanel(null);
     };
-  }, [mapController, mcpClient]);
+  }, [mapController, mcpClient, defaultCatalogUrl, titilerUrl]);
 
   const handleDatasetAdded = React.useCallback((_datasetId: string, firstLayerId?: string) => {
     setLayerRefreshKey(k => k + 1);
