@@ -44,9 +44,8 @@ RUN npm install -g @zed-industries/claude-agent-acp && \
 # jupyter-geoagent registers the GeoAgent Map launcher tile plus
 # `geoagent:*` JupyterLab commands so the LLM personas can drive the
 # map directly from chat.
-RUN pip install --no-cache-dir \
-      "jupyter-ai>=3,<4" \
-      "jupyter-geoagent @ git+https://github.com/geojupyter/jupyter-geoagent.git@main"
+COPY requirements.txt /tmp/requirements.txt 
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # Geoagent system prompt for the AI personas. AGENTS.md is the source of
 # truth (read by Claude Code, OpenCode, Codex, Cursor, etc.); CLAUDE.md is
