@@ -2,7 +2,7 @@ version: 1
 project:
   title: jupyter-geoagent
   description: Interactive geospatial data exploration in JupyterLab
-  github: https://github.com/boettiger-lab/jupyter-geoagent
+  github: https://github.com/geojupyter/jupyter-geoagent
   toc:
     - file: index.md
     - file: usage.md

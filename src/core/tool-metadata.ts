@@ -10,7 +10,7 @@
  * called inside execute functions, which we do not invoke.
  *
  * When the shared @boettiger-lab/geo-agent-core package lands
- * (boettiger-lab/jupyter-geoagent#2), swap this import for the new path.
+ * (geojupyter/jupyter-geoagent#2), swap this import for the new path.
  */
 
 import { createMapTools } from 'geo-agent/app/map-tools.js';

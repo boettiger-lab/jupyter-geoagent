@@ -24,7 +24,7 @@ const geoagentIcon = new LabIcon({
 });
 
 const COMMAND_ID = 'geoagent:open';
-const PLUGIN_ID = '@boettiger-lab/jupyter-geoagent:plugin';
+const PLUGIN_ID = '@geojupyter/jupyter-geoagent:plugin';
 
 // Default settings — can be overridden via JupyterLab settings schema
 const DEFAULTS = {

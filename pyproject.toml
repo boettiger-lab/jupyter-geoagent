@@ -49,8 +49,8 @@ artifacts = ["jupyter_geoagent/labextension"]
 exclude = [".github", "node_modules"]
 
 [tool.hatch.build.targets.wheel.shared-data]
-"jupyter_geoagent/labextension" = "share/jupyter/labextensions/@boettiger-lab/jupyter-geoagent"
-"install.json" = "share/jupyter/labextensions/@boettiger-lab/jupyter-geoagent/install.json"
+"jupyter_geoagent/labextension" = "share/jupyter/labextensions/@geojupyter/jupyter-geoagent"
+"install.json" = "share/jupyter/labextensions/@geojupyter/jupyter-geoagent/install.json"
 "jupyter-config/server-config" = "etc/jupyter/jupyter_server_config.d"
 
 [tool.hatch.build.hooks.version]

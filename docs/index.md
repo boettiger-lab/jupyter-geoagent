@@ -15,18 +15,18 @@ A JupyterLab extension for interactive geospatial data exploration: browse STAC 
 pip install jupyter-geoagent
 ```
 
-See the project [README on GitHub](https://github.com/boettiger-lab/jupyter-geoagent) for development setup.
+See the project [README on GitHub](https://github.com/geojupyter/jupyter-geoagent) for development setup.
 
 ### As a container image (recommended for JupyterHub)
 
 A pre-built, minimal JupyterHub single-user image ships with jupyter-geoagent plus [jupyter-ai](https://jupyter-ai.readthedocs.io/) v3 and both the Claude and OpenCode ACP personas wired up:
 
 ```
-ghcr.io/boettiger-lab/jupyter-geoagent:latest
+ghcr.io/geojupyter/jupyter-geoagent:latest
 ```
 
 Everything needed for the full chat-driven workflow (GeoAgent Map panel + `@Claude` / `@OpenCode` personas + `geoagent:*` JupyterLab commands) is pre-configured — no per-pod install step. Rebuilt on every push to `main`, so `:latest` always tracks the current release. Immutable tags (`sha-<commit>`) are also published.
 
-Built from [`docker/Dockerfile`](https://github.com/boettiger-lab/jupyter-geoagent/blob/main/docker/Dockerfile) — base image is `quay.io/jupyter/minimal-notebook`.
+Built from [`docker/Dockerfile`](https://github.com/geojupyter/jupyter-geoagent/blob/main/docker/Dockerfile) — base image is `quay.io/jupyter/minimal-notebook`.
 
 ![GeoAgent Map panel showing the STAC catalog browser, interactive map, and layer controls](images/geoagent-panel.png)

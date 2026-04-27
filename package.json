@@ -1,5 +1,5 @@
 {
-  "name": "@boettiger-lab/jupyter-geoagent",
+  "name": "@geojupyter/jupyter-geoagent",
   "version": "0.1.0",
   "description": "A JupyterLab extension for interactive geospatial data exploration via STAC catalogs and MCP-powered queries.",
   "keywords": [
@@ -10,9 +10,9 @@
     "stac",
     "maplibre"
   ],
-  "homepage": "https://github.com/boettiger-lab/jupyter-geoagent",
+  "homepage": "https://github.com/geojupyter/jupyter-geoagent",
   "bugs": {
-    "url": "https://github.com/boettiger-lab/jupyter-geoagent/issues"
+    "url": "https://github.com/geojupyter/jupyter-geoagent/issues"
   },
   "license": "BSD-3-Clause",
   "author": {
@@ -29,7 +29,7 @@
   "style": "style/index.css",
   "repository": {
     "type": "git",
-    "url": "https://github.com/boettiger-lab/jupyter-geoagent.git"
+    "url": "https://github.com/geojupyter/jupyter-geoagent.git"
   },
   "scripts": {
     "build": "jlpm build:lib && jlpm build:labextension:dev",

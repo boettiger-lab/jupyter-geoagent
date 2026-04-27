@@ -9,7 +9,7 @@ from .handlers import setup_handlers
 
 
 def _jupyter_labextension_paths():
-    return [{"src": "labextension", "dest": "@boettiger-lab/jupyter-geoagent"}]
+    return [{"src": "labextension", "dest": "@geojupyter/jupyter-geoagent"}]
 
 
 def _jupyter_server_extension_points():

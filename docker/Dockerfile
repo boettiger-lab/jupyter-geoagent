@@ -46,7 +46,7 @@ RUN npm install -g @zed-industries/claude-agent-acp && \
 # map directly from chat.
 RUN pip install --no-cache-dir \
       "jupyter-ai>=3,<4" \
-      "jupyter-geoagent @ git+https://github.com/boettiger-lab/jupyter-geoagent.git@main"
+      "jupyter-geoagent @ git+https://github.com/geojupyter/jupyter-geoagent.git@main"
 
 # Geoagent system prompt for the AI personas. AGENTS.md is the source of
 # truth (read by Claude Code, OpenCode, Codex, Cursor, etc.); CLAUDE.md is

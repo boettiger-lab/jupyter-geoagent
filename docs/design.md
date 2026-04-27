@@ -1,7 +1,7 @@
 # jupyter-geoagent: Design Specification
 
 **Date:** 2026-04-14
-**Repo:** `boettiger-lab/jupyter-geoagent`
+**Repo:** `geojupyter/jupyter-geoagent`
 
 :::{note}
 This is an internal architecture reference for contributors. If you are looking for how to use the extension, see the [Usage Guide](usage.md) instead.
