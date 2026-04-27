@@ -48,4 +48,15 @@ RUN pip install --no-cache-dir \
       "jupyter-ai>=3,<4" \
       "jupyter-geoagent @ git+https://github.com/boettiger-lab/jupyter-geoagent.git@main"
 
+# Geoagent system prompt for the AI personas. AGENTS.md is the source of
+# truth (read by Claude Code, OpenCode, Codex, Cursor, etc.); CLAUDE.md is
+# a one-liner `@AGENTS.md` include for older Claude Code versions. Both
+# are baked into the image at a non-mounted system path; a
+# `before-notebook.d` hook copies them into $HOME on container start
+# (only when not already present). $HOME is overlaid by the JupyterHub PVC
+# mount at runtime, so the files can't be baked there directly.
+COPY AGENTS.md CLAUDE.md /usr/local/share/jupyter-geoagent/
+COPY install-agent-md.sh /usr/local/bin/before-notebook.d/00-install-agent-md.sh
+RUN chmod +x /usr/local/bin/before-notebook.d/00-install-agent-md.sh
+
 USER ${NB_UID}

@@ -92,6 +92,143 @@ export function registerGeoAgentCommands(app: JupyterFrontEnd): void {
   }
 
   registerAddLayerCommand(app);
+  registerMcpReadCommands(app);
+}
+
+/**
+ * Register `geoagent:*` commands that pass through to the NRP MCP server's
+ * read-only tools (browse_stac_catalog, get_stac_details, get_collection, query).
+ *
+ * The panel's MCPClientWrapper owns the actual MCP connection (and the CORS-safe
+ * proxy path through the Jupyter server extension); these commands just forward
+ * args and return the tool's text result. That keeps a single MCP client in
+ * the system — Claude/jupyter-ai reaches NRP only via the panel, never directly.
+ *
+ * Hardcoded names + schemas because JupyterLab commands must be registered at
+ * activation time so `list_all_commands` can surface them to the LLM regardless
+ * of whether a panel is open yet. The `usage` strings are intentionally short:
+ * the upstream MCP tool descriptions ship far more detail (especially `query`'s
+ * SQL/H3 rules), and the LLM gets the full text back as part of each call's
+ * result. CLAUDE.md should orient the agent to that fact.
+ */
+function registerMcpReadCommands(app: JupyterFrontEnd): void {
+  registerMcpPassthrough(app, 'browse_stac_catalog', {
+    caption: 'Browse the STAC catalog to discover available datasets.',
+    usage: `Browse the public STAC catalog to list available collection IDs and titles. Use this first when the user asks about data outside the layers already on the map. Returns markdown.
+
+Pair with geoagent:get_stac_details (markdown for SQL prep) or geoagent:get_collection (structured JSON for add_layer).
+
+Optional parameters:
+- catalog_url: alternate STAC catalog URL
+- catalog_token: Bearer token for private catalogs`,
+    args: {
+      type: 'object',
+      properties: {
+        catalog_url: { type: 'string', description: 'Optional alternate STAC catalog URL' },
+        catalog_token: { type: 'string', description: 'Optional Bearer token for private catalogs' },
+      },
+    },
+  });
+
+  registerMcpPassthrough(app, 'get_stac_details', {
+    caption: 'Fetch markdown metadata (parquet paths, column schemas, query rules) for a STAC collection.',
+    usage: `Markdown metadata for a STAC collection — parquet S3 paths, column schemas, and dataset-specific guidance (DISTINCT requirements, aggregation rules). This is the right read tool when you plan to write SQL against the dataset.
+
+ALWAYS call this before geoagent:query — copy parquet paths from this output verbatim into read_parquet(); never guess paths.
+
+Use geoagent:get_collection instead if you need machine-readable JSON to drive geoagent:add_layer.
+
+Required:
+- dataset_id: STAC collection ID (e.g. 'wdpa', 'fire-perimeters')
+
+Optional:
+- catalog_url, catalog_token`,
+    args: {
+      type: 'object',
+      properties: {
+        dataset_id: { type: 'string', description: 'STAC collection ID' },
+        catalog_url: { type: 'string' },
+        catalog_token: { type: 'string' },
+      },
+      required: ['dataset_id'],
+    },
+  });
+
+  registerMcpPassthrough(app, 'get_collection', {
+    caption: 'Fetch structured JSON metadata for a STAC collection (assets, extent, columns).',
+    usage: `Structured JSON metadata for a STAC collection — assets (PMTiles, COG, parquet), per-asset STAC extension fields (table:columns, raster:bands, vector:layers), spatial extent, child collection IDs, S3 paths pre-resolved.
+
+Use this when you need machine-readable metadata to drive geoagent:add_layer (you need an asset_id from this output). For markdown summaries aimed at human/LLM reading, prefer geoagent:get_stac_details.
+
+Required:
+- collection_id: STAC collection ID
+
+Optional:
+- catalog_url, catalog_token`,
+    args: {
+      type: 'object',
+      properties: {
+        collection_id: { type: 'string', description: 'STAC collection ID' },
+        catalog_url: { type: 'string' },
+        catalog_token: { type: 'string' },
+      },
+      required: ['collection_id'],
+    },
+  });
+
+  registerMcpPassthrough(app, 'query', {
+    caption: 'Run a DuckDB SQL query over S3 parquet files referenced by the STAC catalog.',
+    usage: `Run DuckDB SQL against S3 parquet files referenced by the STAC catalog. The full upstream tool response includes detailed query-optimization rules (h0 partition pruning, hex resolution joins, raster-vs-vector aggregation, area-from-hex counts) — getting those wrong on hex data can be off by 1000x. Read the rules in the response and follow them.
+
+CRITICAL: There are no tables. Every FROM must be read_parquet('s3://...'). NEVER guess paths. Always call geoagent:browse_stac_catalog and geoagent:get_stac_details first, then copy paths verbatim.
+
+Required:
+- sql_query: full SQL string
+
+Optional (private data):
+- s3_key, s3_secret, s3_endpoint, s3_scope`,
+    args: {
+      type: 'object',
+      properties: {
+        sql_query: { type: 'string' },
+        s3_key: { type: 'string' },
+        s3_secret: { type: 'string' },
+        s3_endpoint: { type: 'string' },
+        s3_scope: { type: 'string' },
+      },
+      required: ['sql_query'],
+    },
+  });
+}
+
+function registerMcpPassthrough(
+  app: JupyterFrontEnd,
+  toolName: string,
+  meta: { caption: string; usage: string; args: any },
+): void {
+  app.commands.addCommand(`geoagent:${toolName}`, {
+    label: `GeoAgent: ${toolName}`,
+    caption: meta.caption,
+    usage: meta.usage,
+    describedBy: { args: meta.args },
+    execute: async (args) => {
+      const panel = getActivePanel();
+      if (!panel) return NO_PANEL_ERROR;
+      const argsObj = (args ?? {}) as Record<string, any>;
+      if (!panel.mcpClient) {
+        return recordAndReturn(panel, toolName, argsObj,
+          { success: false, error: `${toolName} requires the panel's MCP connection, which is not connected. Check the Query tab.` });
+      }
+      try {
+        const result = await panel.mcpClient.callTool(toolName, argsObj);
+        panel.recorder.record(toolName, argsObj, result);
+        return result;
+      } catch (err: any) {
+        return recordAndReturn(panel, toolName, argsObj,
+          { success: false, error: err?.message ?? String(err) });
+      }
+    },
+  });
 }
 
 /**
