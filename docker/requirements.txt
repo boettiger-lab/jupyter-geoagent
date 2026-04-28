@@ -1,3 +1,4 @@
+gh-scoped-creds
 jupyter-ai>=3,<4
 jupyter-geoagent @ git+https://github.com/geojupyter/jupyter-geoagent.git@main
 jupyter-myst-build-proxy
