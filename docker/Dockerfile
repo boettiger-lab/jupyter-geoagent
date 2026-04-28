@@ -58,4 +58,10 @@ COPY AGENTS.md CLAUDE.md /usr/local/share/jupyter-geoagent/
 COPY install-agent-md.sh /usr/local/bin/before-notebook.d/00-install-agent-md.sh
 RUN chmod +x /usr/local/bin/before-notebook.d/00-install-agent-md.sh
 
+# Enable GitHub Scoped Creds usage on CryoCloud
+# https://github.com/jupyterhub/gh-scoped-creds
+# TODO: Make this image hub-agnostic!
+ENV GH_SCOPED_CREDS_CLIENT_ID="Iv1.bd27058fd393e285"
+ENV GH_SCOPED_CREDS_APP_URL="https://github.com/apps/cryocloud-github-access"
+
 USER ${NB_UID}
