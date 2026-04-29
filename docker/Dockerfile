@@ -38,6 +38,9 @@ RUN curl -fsSL https://opencode.ai/install | bash && \
 RUN npm install -g @zed-industries/claude-agent-acp && \
     npm cache clean --force
 
+# Typst for PDF rendering (for Fernando's talk 2026-04-29)
+RUN mamba install typst
+
 # jupyter-ai v3 transitively pulls jupyter-ai-acp-client,
 # jupyter-ai-chat-commands, and jupyter-ai-persona-manager, which
 # register the Claude / OpenCode / Goose personas automatically.
