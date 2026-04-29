@@ -30,3 +30,23 @@ For analytical questions ("how much / how many / where the most"):
 - MapLibre filter expressions use the modern form `["==", ["get", "PROP"], VAL]`, not the legacy `["==", "PROP", VAL]`.
 - All `geoagent:*` commands require an open GeoAgent Map panel.
 - For SQL: NEVER guess S3 paths, always use `read_parquet(...)` (not bare `FROM table`), and always include `h0` in joins when both sides are hex datasets. Read the full guidance in `geoagent:query`'s tool response.
+
+## Scope discipline
+
+Answer **exactly** what the user asked — nothing more, nothing less.
+
+- Do not add breakdowns, groupings, or dimensions the user didn't request.
+  If asked for "average fishing hours," return a single number. Do not also
+  break it down by gear type, vessel, year, or region unless the user
+  explicitly asks for that.
+- Do not preemptively run follow-up analyses, "in case it's useful."
+- Do not volunteer additional layers, filters, or visualizations beyond
+  what the user requested.
+- If you think a richer answer would help, **ask first** with one short
+  question (e.g., "Want me to also break that down by gear type?").
+  Do not act on the suggestion until the user confirms.
+- When a request is ambiguous, ask one clarifying question rather than
+  guessing and producing extra output to cover multiple interpretations.
+
+Use the minimum number of `geoagent:*` calls needed to answer the literal
+question. Stop as soon as the question is answered.
