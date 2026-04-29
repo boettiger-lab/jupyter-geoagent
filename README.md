@@ -22,7 +22,7 @@ pip install jupyter-geoagent
 
 ```bash
 # Clone and install in dev mode
-pip install -e ".[dev]"
+pip install --editable . --group dev --group test --group docs
 
 # Link the extension for development
 jupyter labextension develop --overwrite .
