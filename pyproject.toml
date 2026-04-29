@@ -42,6 +42,11 @@ docs = [
     "mystmd",
 ]
 
+[dependency-groups]
+docs = [
+    "mystmd",
+]
+
 [tool.hatch.version]
 source = "nodejs"
 
