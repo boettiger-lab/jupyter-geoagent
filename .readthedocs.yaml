@@ -6,6 +6,8 @@ python:
       command: "sync"
       groups:
         - "docs"
+      extras:
+        - "dev"
 
 build:
   os: "ubuntu-24.04"
