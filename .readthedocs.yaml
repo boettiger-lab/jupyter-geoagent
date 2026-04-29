@@ -9,8 +9,6 @@ build:
       - "npm install -g mystmd"
     build:
       html:
-        - "cd docs"
-        - "myst build --html"
+        - "cd docs && myst build --html"
         - "mkdir --parents $READTHEDOCS_OUTPUT/html/"
-        - "mv _build/html/* $READTHEDOCS_OUTPUT/html/."
-        - "rm -rf _build"  # RTD build fails if _build/html is detected :(
+        - "mv docs/_build/html/* $READTHEDOCS_OUTPUT/html/."
