@@ -1,0 +1,14 @@
+version: 2
+
+build:
+  os: "ubuntu-24.04"
+  tools:
+    nodejs: "24"
+  jobs:
+    install:
+      - "npm install -g mystmd"
+    build:
+      html:
+        - "cd docs && myst build --html"
+        - "mkdir --parents $READTHEDOCS_OUTPUT/html/"
+        - "mv docs/_build/html/* $READTHEDOCS_OUTPUT/html/."
