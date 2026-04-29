@@ -1,24 +1,16 @@
 version: 2
 
-python:
-  install:
-    - method: "uv"
-      command: "sync"
-      groups:
-        - "docs"
-      extras:
-        - "dev"
-
 build:
   os: "ubuntu-24.04"
   tools:
-    python: "3.13"
     nodejs: "24"
   jobs:
+    install:
+      - "npm install -g mystmd"
     build:
       html:
         - "cd docs"
-        - "uv run myst build --html"
+        - "myst build --html"
         - "mkdir --parents $READTHEDOCS_OUTPUT/html/"
         - "mv _build/html/* $READTHEDOCS_OUTPUT/html/."
         - "rm -rf _build"  # RTD build fails if _build/html is detected :(
