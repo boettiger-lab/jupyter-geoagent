@@ -26,7 +26,8 @@ dependencies = [
 ]
 dynamic = ["version", "description", "authors", "urls", "keywords"]
 
-[project.optional-dependencies]
+
+[dependency-groups]
 dev = [
     "jupyterlab>=4.5.1",
 ]
@@ -37,8 +38,6 @@ test = [
     "pytest-cov",
     "pytest-jupyter[server]>=0.6.0",
 ]
-
-[dependency-groups]
 docs = [
     "mystmd",
 ]
